@@ -1,0 +1,3 @@
+,global Epoch,f_uav0,f_uav1,global_accuracy,global_loss
+0,0,"{'local epoch0': 11.116393089294434, 'local epoch1': 11.324615478515625}","{'local epoch0': 9.926833152770996, 'local epoch1': 10.89927864074707}",0.01,26.325218588256835
+1,1,"{'local epoch0': 8.501265525817871, 'local epoch1': 8.431083679199219}","{'local epoch0': 13.15532112121582, 'local epoch1': 11.994937896728516}",0.02,25.30871106567383
