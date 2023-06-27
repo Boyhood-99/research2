@@ -10,7 +10,8 @@ from client import *
 import models, datasets
 from tqdm import tqdm
 import time
-import datetime
+from threading import Thread
+from utils import TrainThread
 
 #python main.py -c ./utils/conf.json
 #global Epoch: 4, acc: 72.61999999999999, loss: 0.8394354427337647
@@ -43,31 +44,59 @@ def main():
 
 	df_list = []
 	for global_epoch in tqdm(range(conf["global_epochs"])):
-	
+		#-----------------------------------------------------
 		# candidates = random.sample(clients, conf["k"])
 		# candidates = clients
 		candidates = []
 		for i in conf['candidates']:
-			candidates.append(clients[i])
-
-		
+			candidates.append(clients[i])		
 		weight_accumulator = {}
 		for name, params in server.global_model.state_dict().items():
 			weight_accumulator[name] = torch.zeros_like(params)
 
-		global_epoch_dic = {}
+		global_epoch_dic = {}#for print log
 		global_epoch_dic['global Epoch'] = global_epoch
-		for candidate in candidates:
+		#---------------------------------------------
+		#---------------------------------------单线程，主要是local_train耗时
+		# for candidate in candidates:
+		# 	diff, loss_dic = candidate.local_train(server.global_model, global_epoch)
 			
-			diff, loss_dic = candidate.local_train(server.global_model, global_epoch)
+		# 	for name, params in server.global_model.state_dict().items():
+		# 		weight_accumulator[name].add_(diff[name])
+		# 	global_epoch_dic[f'f_uav{candidate.client_id}'] = loss_dic
+		# 	# print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")
+		#---------------------------------------------单线程
+		#---------------------------------------多线程
+		num_candidate = len(candidates)
+		threads = []
+		for i in range(num_candidate):
+			thread = TrainThread(candidates[i].local_train(server.global_model, global_epoch))
+			# thread.setDaemon(True)
+			threads.append(thread)
+		# for thread in threads:
+			threads[-1].start()
+
+		
+		for thread in threads:
+			thread.join()
+		#----------------------------------------
+			# diff, loss_dic = thread.getresult()
+			
+			# for name, params in server.global_model.state_dict().items():
+			# 	weight_accumulator[name].add_(diff[name])
+			# 	global_epoch_dic[f'f_uav{candidates[i].client_id}'] = loss_dic
+		#-------------------------------------------------------
+		for i in range(num_candidate):
+			diff, loss_dic = threads[i].getresult()
 			
 			for name, params in server.global_model.state_dict().items():
 				weight_accumulator[name].add_(diff[name])
-			global_epoch_dic[f'f_uav{candidate.client_id}'] = loss_dic
+				global_epoch_dic[f'f_uav{candidates[i].client_id}'] = loss_dic
 			# print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")
+		#--------------------------------------------多线程
 		server.model_aggregate(weight_accumulator)
 		
-		acc, loss = server.model_eval()
+		acc, loss = server.model_eval()#耗时
 		print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}')
 		
 		global_epoch_dic['global_accuracy'] = acc

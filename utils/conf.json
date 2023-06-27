@@ -15,7 +15,7 @@
 	
 	"num_f_uav" : 5,
 	
-	"global_epochs" : 2,
+	"global_epochs" : 5,
 	
 	"local_epochs" : 2,
 	"#local_epochs" : 5,
