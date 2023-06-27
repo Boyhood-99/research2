@@ -7,6 +7,8 @@ class Client(object):
 
 	def __init__(self, conf, model, train_dataset, id = -1, compile = False):
 		
+		# self.location = torch.zeros(size=(3))
+		
 		self.conf = conf
 		
 		self.local_model = models.get_model(self.conf["model_name"]) 
@@ -29,7 +31,7 @@ class Client(object):
 		#  					shuffle=True,
 		# )
 		##自定义样本数量
-		num_sample = np.random.randint(80,100)
+		num_sample = np.random.randint(800,1000)
 		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  num_workers=2, 
 							drop_last =True, pin_memory=True,sampler = DATA.sampler.SubsetRandomSampler(
 							list(np.random.choice(train_indices, num_sample)))
@@ -66,12 +68,12 @@ class Client(object):
 				loss.backward()
 				optimizer.step()
 				
-			# print("Epoch %d done." % e)	
+				
 			# print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")
 			
 			loss_dic[f'local epoch{local_epoch} loss'] = loss.item()
-		print('\n')
-		print(f'local train loss for L_UAV_{self.client_id} in the {global_epoch }-th global epoch:{loss}')
+		# print('\n')
+		# print(f'local train loss for L_UAV_{self.client_id} in the {global_epoch }-th global epoch:{loss}')
 
 		diff = dict()
 		for name, data in self.local_model.state_dict().items():
@@ -83,3 +85,6 @@ class Client(object):
 			
 		return diff , loss_dic
 		
+	# def step(self, ):
+	# 	location = self.location
+	# 	torch.random.

@@ -9,11 +9,14 @@ from server import *
 from client import *
 import models, datasets
 from tqdm import tqdm
+import time
+import datetime
 
 #python main.py -c ./utils/conf.json
 #global Epoch: 4, acc: 72.61999999999999, loss: 0.8394354427337647
 
 def main():
+	date = datetime.datetime.now().strftime('%m-%d')
 
 	# parser = argparse.ArgumentParser(description='Federated Learning')
 	# parser.add_argument('-c', '--config', dest='conf')
@@ -76,15 +79,23 @@ def main():
 
 
 	df = pd.DataFrame(df_list)
-	df.to_csv('log.csv')
+	df.to_csv(f'log{date}.csv')
 	return df
 if __name__ == '__main__':
+	
+	
+	# date = datetime.datetime.now().strftime('%H:%M:%S')
+	# print(date)
+	begin = time.time()
+	print(begin)
 	print(torch.cuda.is_available())
 	print(torch.__version__)
 
 
 	main()
-				
+	end = time.time()
+	print(end - begin)
+
 			
 		
 		
