@@ -1,6 +1,8 @@
-import models
+# import models
+from torchvision import models
 import torch
-
+from torchinfo import summary
+import torch.nn as nn
 #in-place 操作可能会覆盖计算梯度所需的值。
 
 #每个 in-place 操作实际上都需要重写计算图的实现。out-of-place只是分配新对象并保留对旧计算图的引用，
@@ -12,7 +14,15 @@ class Server(object):
 	
 		self.conf = conf 
 		
-		self.global_model = models.get_model(self.conf["model_name"]) 
+		# self.global_model = models.get_model(self.conf["model_name"]) 
+		# summary(self.global_model, input_size=(3, 3, 32, 32))
+		#-------------------------------------------
+		self.global_model = models.resnet18(weights =models.ResNet18_Weights.DEFAULT)
+		inchannel = self.global_model.fc.in_features
+		self.global_model.fc = nn.Linear(inchannel, 10)
+		if torch.cuda.is_available():
+			self.global_model.cuda()
+		#----------------------------------------
 		if compile:
 			self.global_model = torch.compile(self.global_model) 
 		

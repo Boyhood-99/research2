@@ -1,5 +1,6 @@
 #dir
 data/
+tensorboard/log/
 *.csv
 
 # Byte-compiled / optimized / DLL files

@@ -1,7 +1,7 @@
 {
 	
-	"model_name" : "resnet50",
-	"#model_name" : "resnet18",
+	"#model_name" : "resnet50",
+	"model_name" : "resnet18",
 
 	"type" : "cifar",
 
@@ -10,12 +10,12 @@
 	"momentum" : 0.0001,
 	
 	"lambda" : 0.1,
-	"compile" : false,
+	"compile" : true,
 
 	
 	"num_f_uav" : 5,
 	
-	"global_epochs" : 5,
+	"global_epochs" : 100,
 	
 	"local_epochs" : 2,
 	"#local_epochs" : 5,

@@ -1,7 +1,11 @@
+import torch
 import numpy as np
-import models, torch, copy
-from tqdm import tqdm
+# import models
+from torchvision import models
+
 import torch.utils.data as DATA
+from torchinfo import summary
+import torch.nn as nn
 
 class Client(object):
 
@@ -11,10 +15,18 @@ class Client(object):
 		
 		self.conf = conf
 		
-		self.local_model = models.get_model(self.conf["model_name"]) 
+		# self.local_model = models.get_model(self.conf["model_name"]) 
+		# summary(self.local_model, input_size=(3, 3, 32, 32))
+		#-----------------------------------------------------
+		self.local_model = models.resnet18(weights =models.ResNet18_Weights.DEFAULT)
+		inchannel = self.local_model.fc.in_features
+		self.local_model.fc = nn.Linear(inchannel, 10)
+		if torch.cuda.is_available():
+			self.local_model.cuda()
+		#------------------------------------------
 		if compile:
 			self.local_model = torch.compile(self.local_model)
-		
+
 		self.client_id = id
 		
 		self.train_dataset = train_dataset
@@ -25,18 +37,18 @@ class Client(object):
 
 		train_indices = all_range[id * data_len: (id + 1) * data_len]
 
-		#完全平分
-		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], num_workers=2, 
-		# 					drop_last =True, pin_memory=True, sampler=DATA.sampler.SubsetRandomSampler(train_indices),
-		#  					shuffle=True,
-		# )
-		##自定义样本数量
-		num_sample = np.random.randint(800,1000)
-		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  num_workers=2, 
-							drop_last =True, pin_memory=True,sampler = DATA.sampler.SubsetRandomSampler(
-							list(np.random.choice(train_indices, num_sample)))
-							# shuffle=True,
+###-------------------------完全平分
+		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], num_workers=2, 
+							drop_last =True, pin_memory=True, sampler=DATA.sampler.SubsetRandomSampler(train_indices),
 							)
+####------------------------------------
+		#自定义样本数量
+		# num_sample = np.random.randint(800,1000)
+		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  num_workers=2, 
+		# 					drop_last =True, pin_memory=True,sampler = DATA.sampler.SubsetRandomSampler(
+		# 					list(np.random.choice(train_indices, num_sample)))
+		# 					# shuffle=True,
+		# 					)
 									
 		
 	def local_train(self, global_model, global_epoch):

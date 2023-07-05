@@ -3,7 +3,10 @@ from torchvision import datasets, transforms
 def get_dataset(dir, name):
 
 	if name=='mnist':
-		train_dataset = datasets.MNIST(dir, train=True, download=True, transform=transforms.ToTensor())
+		transform_train = transforms.Compose([ transforms.ToTensor(),  
+				  			transforms.Normalize((0.5,), (0.5,)) 
+							]) 
+		train_dataset = datasets.MNIST(dir, train=True, download=True, transform=transform_train())
 		eval_dataset = datasets.MNIST(dir, train=False, transform=transforms.ToTensor())
 		
 	elif name=='cifar':

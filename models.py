@@ -28,3 +28,21 @@ def get_model(name="resnet50",):
 		return model.cuda()
 	else:
 		return model 
+
+
+
+
+
+# ======================resnet18
+# Total params: 23,379,024
+# Trainable params: 23,379,024
+# Non-trainable params: 0
+# Params size (MB): 93.52
+# ======================resnet18
+
+# =========================res50
+# Total params: 51,114,064
+# Trainable params: 51,114,064
+# Non-trainable params: 0
+# Params size (MB): 204.46
+# =========================res50
