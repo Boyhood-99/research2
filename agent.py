@@ -13,28 +13,28 @@ from fed_alg import FedAvg
 import datasets
 
 class AgentSAC():
-    def __init__(self, conf, policy_lr = 3e-6, path='./SAC/policy_sac_model',env=Environment2(),capacity=1000,size=300000) -> None:
+    def __init__(self, conf, policy_lr = 3e-6, path='./SAC/policy_sac_model',capacity=1000,size=300000) -> None:
         self.conf = conf
         self.config_train = conf['config_train']
 
-        self.env = env
+        self.env = Environment2(self.conf)
         REPLAYBUFFER=size
         self.MEMORY_WARMUP_CAPACITY=capacity
         F_UAV_NUM=self.env.f_uav_num
         END_REWARD=self.env.end_reward
         self.s_dim = F_UAV_NUM*2+4
         self.a_dim = 6
-        self.step_sum = 0
+        self.step_num = 0
         self.ep_reward = 0
-        if type(env) == Environment0:
+        if type(self.env) == Environment0:
             self.s_dim = F_UAV_NUM*2 + 4
             self.a_dim = 3
 
-        if type(env) == Environment1:
+        if type(self.env) == Environment1:
             self.s_dim = F_UAV_NUM*2 + 2
             self.a_dim = 3
 
-        if type(env) == Environment2:
+        if type(self.env) == Environment2:
             self.s_dim = F_UAV_NUM*6 + 5
             # self.a_dim = 3
 
@@ -43,11 +43,9 @@ class AgentSAC():
         self.sac = SAC(state_dim=self.s_dim,action_dim=self.a_dim,device=self.config_train.DEVICE,
                         batch_size=self.config_train.BATCHSIZE,
                         replay_buffer_size=REPLAYBUFFER,policy_lr = policy_lr)
-        self.train_datasets, self.eval_datasets = datasets.get_dataset("./data/", conf["type"])
-        self.fl = FedAvg(conf = conf, train_datasets = self.train_datasets, eval_datasets = self.eval_datasets)
 
     def reset(self, ):
-        self.step_sum = 0
+        self.step_num = 0
         self.ep_reward = 0
         s = self.env.reset()
         return s
@@ -56,18 +54,17 @@ class AgentSAC():
         s = self.reset()
         s = self.z(s)
         actions = []
-        # for i in range(global_epochs):
         while True:
-            self.step_sum+=1
+            
             if test:
                 a = self.sac.test_choose_action(s) 
             else:
                 a = self.sac.choose_action(s)             
             # s_, r, done ,x,y= env.step(a)
             action=deepcopy(a)          
-            s_, r, done ,t_comm_,t_total_,l_uav_location_,f_uav_location_,_= self.env.step(action)
+            s_, r, done ,t_comm_,t_total_,l_uav_location_,f_uav_location_,_= self.env.step(self.step_num, action)
             ###
-            # global_epoch_dic, acc = self.fl.globaliter(global_epoch = self.step_sum)
+
             ###
             
             s_=self.z(s_)
@@ -81,12 +78,12 @@ class AgentSAC():
                 if self.a_dim > 3:
                     action_dic['alpha']  = action[3:]
                 actions.append(action_dic)
-
+            self.step_num+=1
             self.ep_reward += r
             s=s_
             if done:
                 break
-        print('Episode:', i, ' Reward: %.4f' % self.ep_reward, 'Step_sum: %i' % self.step_sum,' timetotal: %.4f' % self.env.time_total )
+        print('Episode:', i, ' Reward: %.4f' % self.ep_reward, 'Step_sum: %i' % self.step_num,' timetotal: %.4f' % self.env.time_total )
         if test:
             return -self.ep_reward, actions
         else:

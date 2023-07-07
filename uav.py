@@ -1,10 +1,12 @@
 import models_1
 from torchvision import models
+import torch.utils.data as DATA
 import torch
 # from torchinfo import summary
 from torchsummary import summary
 from torchstat import stat
 import torch.nn as nn
+import numpy as np
 #in-place 操作可能会覆盖计算梯度所需的值。
 
 #每个 in-place 操作实际上都需要重写计算图的实现。out-of-place只是分配新对象并保留对旧计算图的引用，
@@ -111,20 +113,20 @@ class Client(object):
 		train_indices = all_range[id * data_len: (id + 1) * data_len]
 
 ###-------------------------完全平分
-		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], num_workers=2, 
-							drop_last =True, pin_memory=True, sampler=DATA.sampler.SubsetRandomSampler(train_indices),
-							)
+		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], num_workers=2, 
+		# 					drop_last =True, pin_memory=True, sampler=DATA.sampler.SubsetRandomSampler(train_indices),
+		# 					)
 ####------------------------------------
 		#自定义样本数量
-		# num_sample = np.random.randint(800,1000)
-		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  num_workers=2, 
-		# 					drop_last =True, pin_memory=True,sampler = DATA.sampler.SubsetRandomSampler(
-		# 					list(np.random.choice(train_indices, num_sample)))
-		# 					# shuffle=True,
-		# 					)
+		num_sample = np.random.randint(800,1000)
+		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  num_workers=2, 
+							drop_last =True, pin_memory=True,sampler = DATA.sampler.SubsetRandomSampler(
+							list(np.random.choice(train_indices, num_sample)))
+							# shuffle=True,
+							)
 									
 		
-	def local_train(self, global_model, global_epoch):
+	def local_train(self, global_model, global_epoch, local_epochs):
 
 		for name, param in global_model.state_dict().items():
 			self.local_model.state_dict()[name].copy_(param.clone())
@@ -136,7 +138,8 @@ class Client(object):
 		
 		self.local_model.train()
 		loss_dic = {}
-		for local_epoch in range(self.conf["local_epochs"]):
+		# for local_epoch in range(self.conf["local_epochs"]):
+		for local_epoch in range(local_epochs):
 			
 			for batch_id, batch in enumerate(self.train_loader):
 				data, target = batch
@@ -157,19 +160,13 @@ class Client(object):
 			# print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")
 			
 			loss_dic[f'local epoch{local_epoch} loss'] = loss.item()
-		# print('\n')
+		
 		# print(f'local train loss for L_UAV_{self.client_id} in the {global_epoch }-th global epoch:{loss}')
 
 		diff = dict()
 		for name, data in self.local_model.state_dict().items():
 			diff[name] = (data - global_model.state_dict()[name])
-			
 			# diff[name] = data.sub_(global_model.state_dict()[name])
-			
-			
 			
 		return diff , loss_dic
 		
-	# def step(self, ):
-	# 	location = self.location
-	# 	torch.random.

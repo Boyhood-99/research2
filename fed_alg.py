@@ -1,7 +1,7 @@
 import datetime
+import time
 import torch
 from uav import *
-from client import *
 from utils import TrainThread
 from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
@@ -14,11 +14,13 @@ class FedAvg():
             self.server = Server(conf, eval_datasets, compile=conf['compile'])
             self.clients = []
             
+            
             for uav_id in range(conf['f_uav_num']):
                 self.clients.append(Client(conf, self.server.global_model, train_datasets, uav_id, conf['compile']))
-	
+            self.acc = 0
 
-    def globaliter(self, global_epoch):
+    def iteration(self, global_epoch, local_epochs):
+        begin = time.time()
         date = datetime.datetime.now().strftime('%m-%d')
 
         # parser = argparse.ArgumentParser(description='Federated Learning')
@@ -50,7 +52,7 @@ class FedAvg():
         num_candidate = len(candidates)
         threads = []
         for i in range(num_candidate):
-            thread = TrainThread(candidates[i].local_train(self.server.global_model, global_epoch))
+            thread = TrainThread(candidates[i].local_train(self.server.global_model, global_epoch, local_epochs))
             # thread.setDaemon(True)
             threads.append(thread)
         # for thread in threads:
@@ -84,14 +86,15 @@ class FedAvg():
         # 	acc, loss = server.model_eval()#耗时
         # 	print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}')
         #---------------------------------------
-        acc, loss = self.server.model_eval()#耗时
+        acc, loss = self.server.model_eval()    ###耗时
+        diff_acc = acc - self.acc
+        self.acc = acc
 
+        diff_time = time.time() - begin
+        print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}, time: {diff_time}')
         
-
-        print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}')
         
-
         global_epoch_dic['global_accuracy'] = acc
         global_epoch_dic['global_loss'] = loss
         
-        return global_epoch_dic, acc
+        return global_epoch_dic, acc, diff_acc

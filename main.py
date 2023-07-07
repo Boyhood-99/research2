@@ -1,7 +1,6 @@
 import torch
 import json
 from uav import *
-from client import *
 from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
 from visualization import rlvisual
@@ -12,8 +11,8 @@ import sys
 sys.path.append('/root/paper2/RL')
 writer = SummaryWriter('./tensorboard/log/')
 
-
-
+##原来的40 收敛， 100episodes足够
+###time is episodes*global_epochs*local_epochs*4s  such as 50*100*2*4 =40000s = 12h
 
 def main(conf):
    
@@ -24,7 +23,6 @@ def main(conf):
     for i in range(conf['config_train'].MAX_EPISODES):
         ep_reward = rl.episode(i, conf['global_epochs'])
         
-
         rl.update(update_times = 200)
         reward_ls.append(ep_reward)
     # episode_reward_sac,q,p,alpha,t_comm_sac,t_total_sac,l_uav_location_sac,f_uav_location_sac,d_sac,total_time_sac=sac_train()

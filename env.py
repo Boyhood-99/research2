@@ -2,6 +2,8 @@ import math
 import numpy as np
 from systemmodel import SystemModel, SystemModel0, SystemModel1, SystemModel2
 from copy import deepcopy
+from fed_alg import FedAvg
+import datasets 
 
 
 #state space based on location
@@ -57,6 +59,12 @@ class Environment(object):
         self.iteration = 5
         self.iteration_min = 1
         self.iteration_max = 30
+
+        self.local_epochs= 2
+        self.local_epochs_min = 2
+        self.local_epochs_max = 2
+
+        self.step_num = 0
         
         self.systemmodel = SystemModel(f_uav_num = self.f_uav_num)
         self.num_episode = 0
@@ -225,10 +233,14 @@ class Environment(object):
         return self.state, reward, done, np.max(t_up_ + t_down_), np.max(t_comp + t_up_ + t_down_), l, f, d
     
 class Environment2(Environment):
-    def __init__(self, ):
+    def __init__(self, conf):
         super().__init__()
+        self.train_datasets, self.eval_datasets = datasets.get_dataset("./data/", conf["type"])
+        self.fl = FedAvg(conf = conf, train_datasets = self.train_datasets, eval_datasets = self.eval_datasets)
         self.systemmodel = SystemModel2()
+        
     def reset(self):
+        self.step_num = 0
         
         #随机初始化底层无人机位置，范围{0，1000}
         # self.f_uav_location = np.random.uniform(0, 20, size = (self.f_uav_num, 3))
@@ -255,7 +267,7 @@ class Environment2(Environment):
 
         return self.state
 
-    def step(self, action):
+    def step(self, step_num, action):
         # assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
         
         state = self.state
@@ -275,10 +287,17 @@ class Environment2(Environment):
         action = action
         action[0] = (self.l_v_max-self.l_v_min)/2*action[0] + (self.l_v_max + self.l_v_min)/2
         action[1] = math.pi/2*action[1]
-        action[2] = math.ceil((self.iteration_max-self.iteration_min)/2*action[2] + (self.iteration_max + self.iteration_min)/2)
+        # action[2] = math.ceil((self.iteration_max-self.iteration_min)/2*action[2] + (self.iteration_max + self.iteration_min)/2)
+        action[2] = math.ceil((self.local_epochs_max-self.local_epochs_min)/2*action[2] + (self.local_epochs_max + self.local_epochs_min)/2)
         # action[3:6] = action[3:6]
         action[5] = (self.alpha_z_max-self.alpha_z_min)/2*action[5] + (self.alpha_z_max + self.alpha_z_min)/2 
         alpha = action[3:]
+
+        #####
+        local_epochs = int(action[2])
+        global_epoch_dic, acc, diff_acc = self.fl.iteration(step_num, local_epochs)
+
+        #####
        
         distance = self.systemmodel.Distance(f_uav_location, l_uav_location) 
         
@@ -351,8 +370,8 @@ class Environment2(Environment):
         self.local_accuracy_sum = local_accuracy_sum + local_accuracy
         
         #判断该观察状态下，本次episode是否结束
-
-        done = 1 if self.local_accuracy_sum < math.log(self.epsilon) else 0
+        self.step_num += 1
+        done = 1 if self.step_num > 50 else 0
         done = np.array(done)
         
         #环境状态改变, 下一个state
@@ -363,7 +382,8 @@ class Environment2(Environment):
     
         # reward1 = np.min(gain)
         reward1 = 0
-        reward2 = np.array(( - fly_time) * self.systemmodel.p_fly(action[0])/ 1000) 
+        reward2 = np.array(( - fly_time) * self.systemmodel.p_fly(action[0])/ 100) 
+        reward3 = diff_acc
       
 
         #结算奖励
@@ -376,7 +396,7 @@ class Environment2(Environment):
         l = deepcopy(self.l_uav_location)
         f = deepcopy(next_f_uav_location)
         d = deepcopy(np.max(distance))
-        reward = reward1 + reward2
+        reward = reward1 + reward2 + reward3
         
         return self.state, reward, done, np.max(t_up_ + t_down_), np.max(t_comp + t_up_ + t_down_), l, f, d
 

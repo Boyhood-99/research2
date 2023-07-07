@@ -1,6 +1,7 @@
 from pickle import NONE
 from turtle import color
 import torch
+import torch.nn.functional as F
 import numpy as np
 import torch.nn as nn
 from buffer import ReplayBuffer
@@ -320,8 +321,6 @@ class SAC(object,):
         for target_param, param in zip(self.target_value_net.parameters(), self.value_net.parameters()):
             
             target_param.data.copy_(target_param.data * (1.0 - self.soft_tau) + param.data * self.soft_tau)'''
-
-
 
 
 ###there are some nn for rl algrithm 
