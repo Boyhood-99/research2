@@ -26,15 +26,15 @@ class Server(object):
 	
 		self.conf = conf 
 		#-------------------------------------------------------------
-		self.global_model = models_1.get_model(self.conf["model_name"]) 
+		# self.global_model = models_1.get_model(self.conf["model_name"]) 
 		# input = torch.tensor
 		# summary(self.global_model, input_size=(3, 32, 32))
 		#-------------------------------------------
-		# self.global_model = models.resnet18(weights =models.ResNet18_Weights.DEFAULT)
-		# inchannel = self.global_model.fc.in_features
-		# self.global_model.fc = nn.Linear(inchannel, 10)
-		# if torch.cuda.is_available():
-		# 	self.global_model.cuda()
+		self.global_model = models.resnet18(weights =models.ResNet18_Weights.DEFAULT)
+		inchannel = self.global_model.fc.in_features
+		self.global_model.fc = nn.Linear(inchannel, 10)
+		if torch.cuda.is_available():
+			self.global_model.cuda()
 		#----------------------------------------
 		if compile:
 			self.global_model = torch.compile(self.global_model) 
@@ -84,20 +84,20 @@ class Server(object):
 
 class Client(object):
 
-	def __init__(self, conf, model, train_dataset, id = -1, compile = False):
+	def __init__(self, conf, train_dataset, id = -1, compile = False):
 		
 		# self.location = torch.zeros(size=(3))
 		
 		self.conf = conf
 		###
-		self.local_model = models_1.get_model(self.conf["model_name"]) 
+		# self.local_model = models_1.get_model(self.conf["model_name"]) 
 		# summary(self.local_model, input_size=(3, 32, 32))
 		#-----------------------------------------------------
-		# self.local_model = models.resnet18(weights =models.ResNet18_Weights.DEFAULT)
-		# inchannel = self.local_model.fc.in_features
-		# self.local_model.fc = nn.Linear(inchannel, 10)
-		# if torch.cuda.is_available():
-		# 	self.local_model.cuda()
+		self.local_model = models.resnet18(weights =models.ResNet18_Weights.DEFAULT)
+		inchannel = self.local_model.fc.in_features
+		self.local_model.fc = nn.Linear(inchannel, 10)
+		if torch.cuda.is_available():
+			self.local_model.cuda()
 		#------------------------------------------
 		if compile:
 			self.local_model = torch.compile(self.local_model)
@@ -124,17 +124,14 @@ class Client(object):
 							list(np.random.choice(train_indices, num_sample)))
 							# shuffle=True,
 							)
-									
+		self.optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'],
+									momentum=self.conf['momentum'])
+		# self.lossfun =  torch.nn.functional.cross_entropy()
 		
 	def local_train(self, global_model, global_epoch, local_epochs):
 
 		for name, param in global_model.state_dict().items():
 			self.local_model.state_dict()[name].copy_(param.clone())
-	
-		#print(id(model))
-		optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'],
-									momentum=self.conf['momentum'])
-		#print(id(self.local_model))
 		
 		self.local_model.train()
 		loss_dic = {}
@@ -148,13 +145,15 @@ class Client(object):
 					data = data.cuda()
 					target = target.cuda()
 			
-				optimizer.zero_grad()
+
+			
+				self.optimizer.zero_grad()
 				#前向传播
 				output = self.local_model(data)
 				loss = torch.nn.functional.cross_entropy(output, target)
 				#反向传播
 				loss.backward()
-				optimizer.step()
+				self.optimizer.step()
 				
 				
 			# print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")

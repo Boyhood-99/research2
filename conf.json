@@ -1,8 +1,8 @@
 {
 	
 	"#model_name" : "resnet50",
-	"##model_name" : "resnet18",
-	"model_name" : "cnn",
+	"model_name" : "resnet18",
+	"##model_name" : "cnn",
 	"type" : "cifar",
 
 	"lr" : 0.001,

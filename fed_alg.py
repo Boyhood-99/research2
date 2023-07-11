@@ -11,14 +11,25 @@ writer = SummaryWriter('./tensorboard/log/')
 class FedAvg():
     def __init__(self, conf, train_datasets, eval_datasets, ) -> None:
             self.conf = conf
-            self.server = Server(conf, eval_datasets, compile=conf['compile'])
-            self.clients = []
-            
-            
-            for uav_id in range(conf['f_uav_num']):
-                self.clients.append(Client(conf, self.server.global_model, train_datasets, uav_id, conf['compile']))
-            self.acc = 0
+            self.train_datasets = train_datasets
+            self.eval_datasets = eval_datasets
 
+            self.server = Server(self.conf, self.eval_datasets, compile=self.conf['compile'])
+            self.clients = []
+            for uav_id in range(conf['f_uav_num']):
+                self.clients.append(Client(self.conf,  self.train_datasets, uav_id, self.conf['compile']))
+
+            acc, loss = self.server.model_eval()
+            self.acc = acc
+            self.loss = loss
+    def reset(self,):
+        # self.server.global_model.__init__() 
+        # self.server.global_model.cuda()
+        self.server = Server(self.conf, self.eval_datasets, compile=self.conf['compile'])
+        acc, loss = self.server.model_eval()
+        self.acc = acc
+        self.loss = loss
+        print(f'global Epoch: 0, acc: {self.acc}, loss: {self.loss}')
     def iteration(self, global_epoch, local_epochs):
         begin = time.time()
         date = datetime.datetime.now().strftime('%m-%d')
@@ -87,14 +98,17 @@ class FedAvg():
         # 	print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}')
         #---------------------------------------
         acc, loss = self.server.model_eval()    ###耗时
+
         diff_acc = acc - self.acc
         self.acc = acc
+        diff_loss = loss - self.loss
+        self.loss = loss
 
         diff_time = time.time() - begin
-        print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}, time: {diff_time}')
+        print(f'global Epoch: {global_epoch +1}, acc: {acc}, loss: {loss}, time: {diff_time}')
         
         
         global_epoch_dic['global_accuracy'] = acc
         global_epoch_dic['global_loss'] = loss
         
-        return global_epoch_dic, acc, diff_acc
+        return global_epoch_dic, acc, diff_acc, diff_loss

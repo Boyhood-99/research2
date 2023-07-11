@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 def get_model(name="resnet50",):
 	if name == "resnet18":
-		model = models.resnet18(weights =None)
+		model = models.resnet18(weights =models.ResNet18_Weights.DEFAULT)
 	elif name == "resnet50":
 		model = models.resnet50(weights =None)	
 		# model = models.resnet50(weights =models.ResNet50_Weights.DEFAULT)

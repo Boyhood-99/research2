@@ -13,7 +13,7 @@ from fed_alg import FedAvg
 import datasets
 
 class AgentSAC():
-    def __init__(self, conf, policy_lr = 3e-6, path='./SAC/policy_sac_model',capacity=1000,size=300000) -> None:
+    def __init__(self, conf, policy_lr = 3e-6, path='./SAC/policy_sac_model',capacity=500,size=300000) -> None:#capacity=1000
         self.conf = conf
         self.config_train = conf['config_train']
 
@@ -54,15 +54,17 @@ class AgentSAC():
         s = self.reset()
         s = self.z(s)
         actions = []
-        while True:
-            
+        acc_loss_test = []
+        energy_consum = 0 
+        acc_increase = 0
+        loss_decrease = 0
+        while True:  
             if test:
                 a = self.sac.test_choose_action(s) 
             else:
                 a = self.sac.choose_action(s)             
-            # s_, r, done ,x,y= env.step(a)
             action=deepcopy(a)          
-            s_, r, done ,t_comm_,t_total_,l_uav_location_,f_uav_location_,_= self.env.step(self.step_num, action)
+            s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,global_epoch_dic,l, f , _, _, _, = self.env.step(self.step_num, action)
             ###
 
             ###
@@ -78,22 +80,28 @@ class AgentSAC():
                 if self.a_dim > 3:
                     action_dic['alpha']  = action[3:]
                 actions.append(action_dic)
+                ###
+                acc_loss_test.append(global_epoch_dic)
             self.step_num+=1
             self.ep_reward += r
+            energy_consum +=  energy_consum_
+            acc_increase += acc_increase_
+            loss_decrease += loss_decrease_
             s=s_
             if done:
                 break
-        print('Episode:', i, ' Reward: %.4f' % self.ep_reward, 'Step_sum: %i' % self.step_num,' timetotal: %.4f' % self.env.time_total )
+        print(f'Episode: {i}  Reward: {self.ep_reward} Step_sum:  {self.step_num} \
+              timetotal: {self.env.time_total} energy_consum:{energy_consum}')
         if test:
-            return -self.ep_reward, actions
+            return self.ep_reward, energy_consum, actions, acc_loss_test
         else:
-            return -self.ep_reward
+            return self.ep_reward, energy_consum
         
 
     def update(self, update_times = 200):
         if self.sac.replay_buffer.__len__() > self.MEMORY_WARMUP_CAPACITY : 
             for i in range(update_times):   #50-200np.clip((200-i)*2,50,200)
-                q_,p_,alpha_=self.sac.learn()
+                q_,p_,alpha_ = self.sac.learn()
             
                 
         

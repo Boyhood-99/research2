@@ -235,12 +235,14 @@ class Environment(object):
 class Environment2(Environment):
     def __init__(self, conf):
         super().__init__()
+        self.conf = conf
         self.train_datasets, self.eval_datasets = datasets.get_dataset("./data/", conf["type"])
-        self.fl = FedAvg(conf = conf, train_datasets = self.train_datasets, eval_datasets = self.eval_datasets)
+        self.fl = FedAvg(conf = self.conf, train_datasets = self.train_datasets, eval_datasets = self.eval_datasets)
         self.systemmodel = SystemModel2()
         
     def reset(self):
         self.step_num = 0
+        self.fl.reset()
         
         #随机初始化底层无人机位置，范围{0，1000}
         # self.f_uav_location = np.random.uniform(0, 20, size = (self.f_uav_num, 3))
@@ -295,7 +297,7 @@ class Environment2(Environment):
 
         #####
         local_epochs = int(action[2])
-        global_epoch_dic, acc, diff_acc = self.fl.iteration(step_num, local_epochs)
+        global_epoch_dic, acc, diff_acc, diff_loss = self.fl.iteration(step_num, local_epochs)
 
         #####
        
@@ -371,7 +373,7 @@ class Environment2(Environment):
         
         #判断该观察状态下，本次episode是否结束
         self.step_num += 1
-        done = 1 if self.step_num > 50 else 0
+        done = 1 if self.step_num > 50 - 1 else 0
         done = np.array(done)
         
         #环境状态改变, 下一个state
@@ -381,24 +383,26 @@ class Environment2(Environment):
         #奖励函数求解
     
         # reward1 = np.min(gain)
-        reward1 = 0
-        reward2 = np.array(( - fly_time) * self.systemmodel.p_fly(action[0])/ 100) 
-        reward3 = diff_acc
-      
+        reward_settle = 0
+        energy_consum = np.array(( - fly_time) * self.systemmodel.p_fly(action[0])/ 100) 
+        acc_increase = diff_acc
+        acc_increase = 0
+        loss_decrease = -diff_loss 
 
         #结算奖励
         if done :
-            reward2 += self.end_reward
+            reward_settle += self.end_reward
             self.num_episode += 1
             if self.time_total > self.time_max:
-                reward2 -= self.time_penalty
+                reward_settle -= self.time_penalty
 
         l = deepcopy(self.l_uav_location)
         f = deepcopy(next_f_uav_location)
         d = deepcopy(np.max(distance))
-        reward = reward1 + reward2 + reward3
+        reward = reward_settle + energy_consum + acc_increase + loss_decrease
         
-        return self.state, reward, done, np.max(t_up_ + t_down_), np.max(t_comp + t_up_ + t_down_), l, f, d
+        return self.state, reward, energy_consum, acc_increase, loss_decrease, done, global_epoch_dic,\
+            l, f, d, np.max(t_up_ + t_down_), np.max(t_comp + t_up_ + t_down_)
 
 #state space based on distance
 class Environment1(Environment):

@@ -11,16 +11,18 @@ def flvisual(df, flag):
     glo_acc = list(df['global_accuracy'])
     glo_loss = list(df['global_loss'])
 
-    fig, ax1 = plt.subplots()
-    ax1.plot(glo_acc, label = 'accuracy')
+    fig1, ax1 = plt.subplots()
+    axis1, = ax1.plot(glo_acc, color = 'r', label = 'accuracy')
     ax1.set_xlabel('global epoch')
     ax1.set_ylabel('accuracy')
     
+    
     ax2 = ax1.twinx()
-    ax2.plot(glo_loss, label = 'loss')
-    ax1.set_ylabel('loss')
+    axis2, = ax2.plot(glo_loss, color = 'b', label = 'loss')
+    ax2.set_ylabel('loss')
 
-    plt.savefig(f'fig_{flag}.png')
+    plt.legend([axis1, axis2], ['accuracy', 'loss'])
+    plt.savefig(f'./FL/fig_{flag}.png')
 
 def rlvisual(f_uav_num, config_draw, reward_ls):
     

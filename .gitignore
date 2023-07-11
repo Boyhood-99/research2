@@ -1,5 +1,8 @@
 #dir
 data/
+FL/
+SAC/
+csv/
 tensorboard/log/
 *.csv
 
