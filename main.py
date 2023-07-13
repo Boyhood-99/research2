@@ -35,7 +35,7 @@ def main(conf):
             return_ls.append(ep_reward)
             ene_consum_ls.append(energy_consum)
             
-    
+    print(actions)
     df = pd.DataFrame(acc_loss_test)
     df.to_csv(f'acc_loss_test.csv')
     

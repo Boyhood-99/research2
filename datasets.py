@@ -11,22 +11,33 @@ def get_dataset(dir, name):
 		
 	elif name=='cifar':
 		transform_train = transforms.Compose([
-			transforms.RandomCrop(32, padding=4),
-			transforms.RandomHorizontalFlip(),
-			transforms.ToTensor(),
-			transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+                            transforms.RandomCrop(32, padding=4),
+                            transforms.RandomHorizontalFlip(),
+                            transforms.ToTensor(),
+                            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 		])
-
-		transform_test = transforms.Compose([
-			transforms.ToTensor(),
-			transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-		])
+		# transform_train = transforms.Compose([transforms.Resize((224, 224)),
+        #                 transforms.RandomHorizontalFlip(p=0.5),
+        #                 transforms.ToTensor(),
+        #                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),])
 		
-		train_dataset = datasets.CIFAR10(dir, train=True, download=True,
-										transform=transform_train)
+		transform_test = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),])
+		train_dataset = datasets.CIFAR10(dir, train=True, download=True,transform=transform_train)
 		eval_dataset = datasets.CIFAR10(dir, train=False, transform=transform_test)
-		
 	
+		
+
+# labels = np.argmax(train_labels, axis=1)
+# # 对数据标签进行排序
+
+# order = np.argsort(labels)
+# print("标签下标排序")
+# print(train_labels[order[0:10]])
+# self.train_data = train_images[order]
+# self.train_label = train_labels[order]
+
+
+
 	return train_dataset, eval_dataset
 
 from torchvision import transforms

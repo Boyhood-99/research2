@@ -60,9 +60,9 @@ class Environment(object):
         self.iteration_min = 1
         self.iteration_max = 30
 
-        self.local_epochs= 2
+        self.local_epochs= 5
         self.local_epochs_min = 2
-        self.local_epochs_max = 2
+        self.local_epochs_max = 10
 
         self.step_num = 0
         
@@ -297,7 +297,7 @@ class Environment2(Environment):
 
         #####
         local_epochs = int(action[2])
-        global_epoch_dic, acc, diff_acc, diff_loss = self.fl.iteration(step_num, local_epochs)
+        global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, local_epochs)
 
         #####
        
@@ -373,7 +373,7 @@ class Environment2(Environment):
         
         #判断该观察状态下，本次episode是否结束
         self.step_num += 1
-        done = 1 if self.step_num > 50 - 1 else 0
+        done = 1 if self.step_num > 50 - 1 else 0  #30
         done = np.array(done)
         
         #环境状态改变, 下一个state
@@ -388,6 +388,10 @@ class Environment2(Environment):
         acc_increase = diff_acc
         acc_increase = 0
         loss_decrease = -diff_loss 
+        # loss_decrease = 0
+        reward5 = - avg_local_loss
+        reward5 = 0
+
 
         #结算奖励
         if done :
@@ -399,7 +403,7 @@ class Environment2(Environment):
         l = deepcopy(self.l_uav_location)
         f = deepcopy(next_f_uav_location)
         d = deepcopy(np.max(distance))
-        reward = reward_settle + energy_consum + acc_increase + loss_decrease
+        reward = reward_settle + energy_consum + acc_increase + loss_decrease + reward5
         
         return self.state, reward, energy_consum, acc_increase, loss_decrease, done, global_epoch_dic,\
             l, f, d, np.max(t_up_ + t_down_), np.max(t_comp + t_up_ + t_down_)

@@ -76,16 +76,18 @@ class FedAvg():
             # for name, params in server.global_model.state_dict().items():
             # 	weight_accumulator[name].add_(diff[name])
             # 	global_epoch_dic[f'f_uav{candidates[i].client_id}'] = loss_dic
-        
+        loss_list = []
         for i in range(num_candidate):
             diff, loss_dic = threads[i].getresult()
+
+            loss_list.append(loss_dic[f'local epoch{local_epochs - 1} loss'])
             
             for name, params in self.server.global_model.state_dict().items():
                 weight_accumulator[name].add_(diff[name])
                 global_epoch_dic[f'f_uav{candidates[i].client_id}'] = loss_dic
             # print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")
         #--------------------------------------------多线程
-        
+        avg_local_loss = np.array(loss_list).mean()
         
         self.server.model_aggregate(weight_accumulator)
         #-------------------------------------
@@ -111,4 +113,4 @@ class FedAvg():
         global_epoch_dic['global_accuracy'] = acc
         global_epoch_dic['global_loss'] = loss
         
-        return global_epoch_dic, acc, diff_acc, diff_loss
+        return global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss

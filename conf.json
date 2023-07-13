@@ -5,7 +5,8 @@
 	"##model_name" : "cnn",
 	"type" : "cifar",
 
-	"lr" : 0.001,
+	"#lr" : 0.001,
+	"lr" : 0.01,
 	
 	"momentum" : 0.0001,
 	
@@ -15,14 +16,16 @@
 	
 	"f_uav_num" : 5,
 	
-	"global_epochs" : 1000,
+	"global_epochs" : 50,
 	
-	"local_epochs" : 2,
+	"local_epochs" : 7,
 	"#local_epochs" : 5,
 	
 	"candidates" : [0,1,2,3,4],
 	
-	"#batch_size" : 5,
+	"##batch_size" : 5,
+	"#batch_size" : 16,
 	"batch_size" : 32
+
 	
 }

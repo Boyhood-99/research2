@@ -7,6 +7,7 @@ from torchsummary import summary
 from torchstat import stat
 import torch.nn as nn
 import numpy as np
+import matplotlib.pyplot as plt
 #in-place 操作可能会覆盖计算梯度所需的值。
 
 #每个 in-place 操作实际上都需要重写计算图的实现。out-of-place只是分配新对象并保留对旧计算图的引用，
@@ -99,6 +100,7 @@ class Client(object):
 		if torch.cuda.is_available():
 			self.local_model.cuda()
 		#------------------------------------------
+
 		if compile:
 			self.local_model = torch.compile(self.local_model)
 
@@ -107,6 +109,10 @@ class Client(object):
 		self.train_dataset = train_dataset
 		
 		#客户端平分数据集
+		#cifar10训练集每个data_batch,10000,其中十个类别是随机独立同分布,
+		#DATA.sampler.SubsetRandomSampler用于从给定列表按照列表元素对应样本索引在数据集中抽取样本并
+		# 进行打乱，比如抽取样本索引为[25，86，34，75],返回给loader可能会变为[34,86,25,75]
+		#因此不需要shuffle进行打乱，因为已经打乱了
 		all_range = list(range(len(self.train_dataset)))
 		data_len = int(len(self.train_dataset) / self.conf['f_uav_num'])
 
@@ -124,10 +130,13 @@ class Client(object):
 							list(np.random.choice(train_indices, num_sample)))
 							# shuffle=True,
 							)
-		self.optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'],
-									momentum=self.conf['momentum'])
-		# self.lossfun =  torch.nn.functional.cross_entropy()
 		
+		self.optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'],
+									momentum=self.conf['momentum'],
+									# weight_decay = 1e-4,
+									)
+		# self.lossfun =  torch.nn.functional.cross_entropy()
+
 	def local_train(self, global_model, global_epoch, local_epochs):
 
 		for name, param in global_model.state_dict().items():
