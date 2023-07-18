@@ -16,9 +16,31 @@ class FedAvg():
             self.name = 'FedAvg'
 
             self.server = Server(self.conf, self.eval_datasets, compile=self.conf['compile'])
+
+            ###
+            num_clients = self.conf['f_uav_num']
+            num_classes = 10
+            seed = 2023
+            
+            
+           
+            hetero_dir_part = CIFAR10Partitioner(self.train_dataset.targets,
+                                                num_clients,
+                                                balance=None,
+                                                partition="dirichlet",
+                                                dir_alpha=0.3,
+                                                seed=seed)
+
+            csv_file = f"./partition-reports/cifar10_hetero_dir_0.3_{num_clients}clients.csv"
+            partition_report(self.train_dataset.targets, hetero_dir_part.client_dict,
+                            class_num=num_classes,
+                            verbose=False, file=csv_file)
+            
+
             self.clients = []
             for uav_id in range(conf['f_uav_num']):
-                self.clients.append(Client(self.conf,  self.train_datasets, uav_id, self.conf['compile']))
+                dataset_indice = hetero_dir_part.client_dict[uav_id]
+                self.clients.append(Client(self.conf,  self.train_datasets, dataset_indice, uav_id, self.conf['compile']))
 
             acc, loss = self.server.model_eval()
             self.acc = acc
@@ -31,7 +53,7 @@ class FedAvg():
         self.acc = acc
         self.loss = loss
         print(f'global Epoch: 0, acc: {self.acc}, loss: {self.loss}')
-    def iteration(self, global_epoch, local_epochs, ):
+    def iteration(self, global_epoch, local_epochs):
         begin = time.time()
         date = datetime.datetime.now().strftime('%m-%d')
 
@@ -118,5 +140,5 @@ class FedProx(FedAvg):
         super().__init__(conf, train_datasets, eval_datasets)
         self.name = 'FedProx'
 
-    def iteration(self, global_epoch, local_epochs, fl_name):
-        return super().iteration(global_epoch, local_epochs, fl_name)
+    def iteration(self, global_epoch, local_epochs):
+        return super().iteration(global_epoch, local_epochs)

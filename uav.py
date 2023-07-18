@@ -1,4 +1,8 @@
 import models_1
+import datasets
+import pandas as pd
+import sns
+import matplotlib.pyplot as plt
 from torchvision import models
 import torch.utils.data as DATA
 import torch
@@ -8,17 +12,6 @@ from torchstat import stat
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
-#in-place 操作可能会覆盖计算梯度所需的值。
-
-#每个 in-place 操作实际上都需要重写计算图的实现。out-of-place只是分配新对象并保留对旧计算图的引用，
-# 而 in-place 操作则需要将所有输入的创建更改为代表此操作的函数。
-
-#输出高度 = （输入高度 + 2 * 填充 - 卷积核高度）/ 步幅 + 1
-#输出宽度 = （输入宽度 + 2 * 填充 - 卷积核宽度）/ 步幅 + 1
-#默认的步幅（stride=1）和填充（padding=0）
-#池化层
-#输出特征图高度 = （输入特征图高度 - 池化窗口高度）/ 步幅 + 1
-#输出特征图宽度 = （输入特征图宽度 - 池化窗口宽度）/ 步幅 + 1
 
 
 class Server(object):
@@ -85,11 +78,12 @@ class Server(object):
 
 class Client(object):
 
-	def __init__(self, conf, train_dataset, id = -1, compile = False):
-		
+	def __init__(self, conf, train_dataset, dataset_indice, id = -1, compile = False):
+
 		# self.location = torch.zeros(size=(3))
 		
 		self.conf = conf
+		
 		###
 		# self.local_model = models_1.get_model(self.conf["model_name"]) 
 		# summary(self.local_model, input_size=(3, 32, 32))
@@ -107,6 +101,7 @@ class Client(object):
 		self.client_id = id
 		
 		self.train_dataset = train_dataset
+
 		
 		#客户端平分数据集
 		#cifar10训练集每个data_batch,10000,其中十个类别是随机独立同分布,
@@ -119,18 +114,26 @@ class Client(object):
 		train_indices = all_range[id * data_len: (id + 1) * data_len]
 
 ###-------------------------完全平分
-		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], num_workers=2, 
-							drop_last =True, pin_memory=True, sampler=DATA.sampler.SubsetRandomSampler(train_indices),
-							)
+		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], num_workers=2, 
+		# 					drop_last =True, pin_memory=True, sampler=DATA.sampler.SubsetRandomSampler(train_indices),
+		# 					)
 ####------------------------------------
 		#自定义样本数量
 		# num_sample = np.random.randint(800,1000)
-		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  num_workers=2, 
-		# 					drop_last =True, pin_memory=True,sampler = DATA.sampler.SubsetRandomSampler(
+		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  
+		# 		      		num_workers=2, drop_last =True, pin_memory=True,
+		# 					sampler = DATA.sampler.SubsetRandomSampler(
 		# 					list(np.random.choice(train_indices, num_sample)))
 		# 					# shuffle=True,
 		# 					)
 		
+###----------------------------------
+		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], 
+				      		num_workers=2, drop_last =True, pin_memory=True, 
+							sampler=DATA.sampler.SubsetRandomSampler(dataset_indice),
+							)
+				      		
+
 		self.optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'],
 									momentum=self.conf['momentum'],
 									# weight_decay = 1e-4,
@@ -160,15 +163,16 @@ class Client(object):
 				#前向传播
 				output = self.local_model(data)
 				loss = torch.nn.functional.cross_entropy(output, target)
-				if name = 'FedProx':
+				if name == 'FedProx':
 					proximal_term = 0.0
 					for w, w_t in zip(self.local_model.parameters(), global_model.parameters()):
 						proximal_term += (w - w_t).norm(2)
 
-					loss = loss + (args.mu / 2) * proximal_term
-					train_loss.append(loss.item())
-					loss.backward()
-					optimizer.step()
+					loss = loss + (self.conf['mu'] / 2) * proximal_term
+
+				loss.append(loss.item())
+				
+
 				#反向传播
 				loss.backward()
 				self.optimizer.step()

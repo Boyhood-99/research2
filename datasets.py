@@ -1,4 +1,15 @@
 from torchvision import datasets, transforms
+#in-place 操作可能会覆盖计算梯度所需的值。
+
+#每个 in-place 操作实际上都需要重写计算图的实现。out-of-place只是分配新对象并保留对旧计算图的引用，
+# 而 in-place 操作则需要将所有输入的创建更改为代表此操作的函数。
+
+#输出高度 = （输入高度 + 2 * 填充 - 卷积核高度）/ 步幅 + 1
+#输出宽度 = （输入宽度 + 2 * 填充 - 卷积核宽度）/ 步幅 + 1
+#默认的步幅（stride=1）和填充（padding=0）
+#池化层
+#输出特征图高度 = （输入特征图高度 - 池化窗口高度）/ 步幅 + 1
+#输出特征图宽度 = （输入特征图宽度 - 池化窗口宽度）/ 步幅 + 1
 
 def get_dataset(dir, name):
 
@@ -9,7 +20,7 @@ def get_dataset(dir, name):
 		train_dataset = datasets.MNIST(dir, train=True, download=True, transform=transform_train())
 		eval_dataset = datasets.MNIST(dir, train=False, transform=transforms.ToTensor())
 		
-	elif name=='cifar':
+	elif name=='cifar10':
 		transform_train = transforms.Compose([
                             transforms.RandomCrop(32, padding=4),
                             transforms.RandomHorizontalFlip(),
@@ -39,6 +50,10 @@ def get_dataset(dir, name):
 
 
 	return train_dataset, eval_dataset
+
+
+
+
 
 from torchvision import transforms
 from torchvision.datasets import CIFAR10 as cifar10

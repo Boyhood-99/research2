@@ -2,7 +2,7 @@ import datasets
 import torch.utils.data as DATA
 import matplotlib.pyplot as plt
 import numpy as np
-train_datasets, eval_datasets = datasets.get_dataset("./data/", 'cifar')
+train_datasets, eval_datasets = datasets.get_dataset("./data/", 'cifar10')
 all_range = list(range(len(train_datasets)))
 data_len = int(len(train_datasets) / 5)
 
