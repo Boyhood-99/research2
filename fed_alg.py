@@ -13,6 +13,7 @@ class FedAvg():
             self.conf = conf
             self.train_datasets = train_datasets
             self.eval_datasets = eval_datasets
+            self.name = 'FedAvg'
 
             self.server = Server(self.conf, self.eval_datasets, compile=self.conf['compile'])
             self.clients = []
@@ -30,15 +31,11 @@ class FedAvg():
         self.acc = acc
         self.loss = loss
         print(f'global Epoch: 0, acc: {self.acc}, loss: {self.loss}')
-    def iteration(self, global_epoch, local_epochs):
+    def iteration(self, global_epoch, local_epochs, ):
         begin = time.time()
         date = datetime.datetime.now().strftime('%m-%d')
 
-        # parser = argparse.ArgumentParser(description='Federated Learning')
-        # parser.add_argument('-c', '--config', dest='conf')
-        # args = parser.parse_args()
-
-       
+        
         candidates = []
         for i in self.conf['candidates']:
             candidates.append(self.clients[i])		
@@ -63,7 +60,7 @@ class FedAvg():
         num_candidate = len(candidates)
         threads = []
         for i in range(num_candidate):
-            thread = TrainThread(candidates[i].local_train(self.server.global_model, global_epoch, local_epochs))
+            thread = TrainThread(candidates[i].local_train(self.server.global_model, global_epoch, local_epochs, name = self.name))
             # thread.setDaemon(True)
             threads.append(thread)
         # for thread in threads:
@@ -114,3 +111,12 @@ class FedAvg():
         global_epoch_dic['global_loss'] = loss
         
         return global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss
+
+
+class FedProx(FedAvg):
+    def __init__(self, conf, train_datasets, eval_datasets) -> None:
+        super().__init__(conf, train_datasets, eval_datasets)
+        self.name = 'FedProx'
+
+    def iteration(self, global_epoch, local_epochs, fl_name):
+        return super().iteration(global_epoch, local_epochs, fl_name)

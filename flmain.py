@@ -119,6 +119,8 @@ def main(conf):
 
 	df = pd.DataFrame(df_list)
 	df.to_csv(f'log{date}.csv')
+	date = datetime.datetime.now().strftime('%m-%d')
+	flvisual(df, date, path = f'./FL_main/fig_7_16.png')
 	return df
 
 if __name__ == '__main__':

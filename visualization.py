@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib.patches import ConnectionPatch
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 
-def flvisual(df, flag):
+def flvisual(df, flag, path = f'./FL/fig_7_16.png'):
     # df = pd.read_csv('./log07-05.csv')
     glo_acc = list(df['global_accuracy'])
     glo_loss = list(df['global_loss'])
@@ -22,7 +22,7 @@ def flvisual(df, flag):
     ax2.set_ylabel('loss')
 
     plt.legend([axis1, axis2], ['accuracy', 'loss'])
-    plt.savefig(f'./FL/fig_{flag}.png')
+    plt.savefig(path)
 
 def rlvisual(f_uav_num, config_draw, reward_ls):
     

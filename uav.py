@@ -119,17 +119,17 @@ class Client(object):
 		train_indices = all_range[id * data_len: (id + 1) * data_len]
 
 ###-------------------------完全平分
-		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], num_workers=2, 
-		# 					drop_last =True, pin_memory=True, sampler=DATA.sampler.SubsetRandomSampler(train_indices),
-		# 					)
+		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], num_workers=2, 
+							drop_last =True, pin_memory=True, sampler=DATA.sampler.SubsetRandomSampler(train_indices),
+							)
 ####------------------------------------
 		#自定义样本数量
-		num_sample = np.random.randint(800,1000)
-		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  num_workers=2, 
-							drop_last =True, pin_memory=True,sampler = DATA.sampler.SubsetRandomSampler(
-							list(np.random.choice(train_indices, num_sample)))
-							# shuffle=True,
-							)
+		# num_sample = np.random.randint(800,1000)
+		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  num_workers=2, 
+		# 					drop_last =True, pin_memory=True,sampler = DATA.sampler.SubsetRandomSampler(
+		# 					list(np.random.choice(train_indices, num_sample)))
+		# 					# shuffle=True,
+		# 					)
 		
 		self.optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'],
 									momentum=self.conf['momentum'],
@@ -137,7 +137,7 @@ class Client(object):
 									)
 		# self.lossfun =  torch.nn.functional.cross_entropy()
 
-	def local_train(self, global_model, global_epoch, local_epochs):
+	def local_train(self, global_model, global_epoch, local_epochs, name):
 
 		for name, param in global_model.state_dict().items():
 			self.local_model.state_dict()[name].copy_(param.clone())
@@ -160,6 +160,15 @@ class Client(object):
 				#前向传播
 				output = self.local_model(data)
 				loss = torch.nn.functional.cross_entropy(output, target)
+				if name = 'FedProx':
+					proximal_term = 0.0
+					for w, w_t in zip(self.local_model.parameters(), global_model.parameters()):
+						proximal_term += (w - w_t).norm(2)
+
+					loss = loss + (args.mu / 2) * proximal_term
+					train_loss.append(loss.item())
+					loss.backward()
+					optimizer.step()
 				#反向传播
 				loss.backward()
 				self.optimizer.step()
