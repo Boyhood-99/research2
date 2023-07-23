@@ -6,41 +6,22 @@ from utils import TrainThread
 from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter('./tensorboard/log/')
-
+from datasets import Dataset
 
 class FedAvg():
-    def __init__(self, conf, train_datasets, eval_datasets, ) -> None:
-            self.conf = conf
-            self.train_datasets = train_datasets
-            self.eval_datasets = eval_datasets
+    def __init__(self, conf,  ) -> None:
             self.name = 'FedAvg'
+            self.conf = conf
+            self.dataset = Dataset(self.conf)
 
+            self.eval_datasets = self.dataset.eval_datasets
             self.server = Server(self.conf, self.eval_datasets, compile=self.conf['compile'])
-
-            ###
+            
+            
             num_clients = self.conf['f_uav_num']
-            num_classes = 10
-            seed = 2023
-            
-            
-           
-            hetero_dir_part = CIFAR10Partitioner(self.train_dataset.targets,
-                                                num_clients,
-                                                balance=None,
-                                                partition="dirichlet",
-                                                dir_alpha=0.3,
-                                                seed=seed)
-
-            csv_file = f"./partition-reports/cifar10_hetero_dir_0.3_{num_clients}clients.csv"
-            partition_report(self.train_dataset.targets, hetero_dir_part.client_dict,
-                            class_num=num_classes,
-                            verbose=False, file=csv_file)
-            
-
             self.clients = []
-            for uav_id in range(conf['f_uav_num']):
-                dataset_indice = hetero_dir_part.client_dict[uav_id]
-                self.clients.append(Client(self.conf,  self.train_datasets, dataset_indice, uav_id, self.conf['compile']))
+            for i in range(num_clients):  
+                self.clients.append(Client(self.conf,  self.dataset.train_datasets, self.dataset.dataset_indice_list[i], id=i, compile = self.conf['compile']))
 
             acc, loss = self.server.model_eval()
             self.acc = acc
@@ -136,8 +117,8 @@ class FedAvg():
 
 
 class FedProx(FedAvg):
-    def __init__(self, conf, train_datasets, eval_datasets) -> None:
-        super().__init__(conf, train_datasets, eval_datasets)
+    def __init__(self, conf, ) -> None:
+        super().__init__(conf, )
         self.name = 'FedProx'
 
     def iteration(self, global_epoch, local_epochs):

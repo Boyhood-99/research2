@@ -1,36 +1,3 @@
-import datasets
-import torch.utils.data as DATA
-import matplotlib.pyplot as plt
-import numpy as np
-train_datasets, eval_datasets = datasets.get_dataset("./data/", 'cifar10')
-all_range = list(range(len(train_datasets)))
-data_len = int(len(train_datasets) / 5)
-
-train_indices = all_range[0 * data_len: (0 + 1) * data_len]
-np.random.seed(1)
-num_sample = np.random.randint(20,21)
-print(num_sample)
-l = list(np.random.choice(train_indices, num_sample))
-print(l)
-data_loader = DATA.DataLoader(train_datasets, batch_size=2, num_workers=2, 
-                    drop_last =True, pin_memory=True, sampler=DATA.sampler.SubsetRandomSampler(l),
-
-
-                    )
-# def imshow(img):
-
-# 			#反归一化，将数据重新映射到0-1之间
-# 			img = img / 2 + 0.5
-# 			plt.imshow(np.transpose(img.numpy(), (1,2,0)))
-# 			plt.show()
-
-print(len(data_loader))
-for i, (images, _) in enumerate(data_loader):
-
-    print(_)
-    print(images.numpy().shape)
-    
-    
 
 # import numpy as np
 # import cv2

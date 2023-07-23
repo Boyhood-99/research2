@@ -1,8 +1,3 @@
-import models_1
-import datasets
-import pandas as pd
-import sns
-import matplotlib.pyplot as plt
 from torchvision import models
 import torch.utils.data as DATA
 import torch
@@ -102,32 +97,18 @@ class Client(object):
 		
 		self.train_dataset = train_dataset
 
-		
-		#客户端平分数据集
-		#cifar10训练集每个data_batch,10000,其中十个类别是随机独立同分布,
-		#DATA.sampler.SubsetRandomSampler用于从给定列表按照列表元素对应样本索引在数据集中抽取样本并
-		# 进行打乱，比如抽取样本索引为[25，86，34，75],返回给loader可能会变为[34,86,25,75]
-		#因此不需要shuffle进行打乱，因为已经打乱了
-		all_range = list(range(len(self.train_dataset)))
-		data_len = int(len(self.train_dataset) / self.conf['f_uav_num'])
-
-		train_indices = all_range[id * data_len: (id + 1) * data_len]
-
-###-------------------------完全平分
-		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], num_workers=2, 
-		# 					drop_last =True, pin_memory=True, sampler=DATA.sampler.SubsetRandomSampler(train_indices),
-		# 					)
-####------------------------------------
+		####------------------------------------
 		#自定义样本数量
 		# num_sample = np.random.randint(800,1000)
 		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  
 		# 		      		num_workers=2, drop_last =True, pin_memory=True,
 		# 					sampler = DATA.sampler.SubsetRandomSampler(
-		# 					list(np.random.choice(train_indices, num_sample)))
+		# 					list(np.random.choice(dataset_indice, num_sample)))
 		# 					# shuffle=True,
 		# 					)
+            
+        ###----------------------------------
 		
-###----------------------------------
 		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], 
 				      		num_workers=2, drop_last =True, pin_memory=True, 
 							sampler=DATA.sampler.SubsetRandomSampler(dataset_indice),
@@ -140,7 +121,7 @@ class Client(object):
 									)
 		# self.lossfun =  torch.nn.functional.cross_entropy()
 
-	def local_train(self, global_model, global_epoch, local_epochs, name):
+	def local_train(self, global_model, global_epoch, local_epochs, name = None):
 
 		for name, param in global_model.state_dict().items():
 			self.local_model.state_dict()[name].copy_(param.clone())
@@ -169,9 +150,6 @@ class Client(object):
 						proximal_term += (w - w_t).norm(2)
 
 					loss = loss + (self.conf['mu'] / 2) * proximal_term
-
-				loss.append(loss.item())
-				
 
 				#反向传播
 				loss.backward()

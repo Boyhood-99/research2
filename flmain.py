@@ -3,7 +3,7 @@ import datetime
 import torch
 import pandas as pd
 from uav import *
-import datasets
+from datasets import Dataset
 from tqdm import tqdm
 import time
 from utils import TrainThread
@@ -26,19 +26,14 @@ def main(conf):
 	# parser.add_argument('-c', '--config', dest='conf')
 	# args = parser.parse_args()
 	
-	
-	
-	
-	# print(type(conf))
-	train_datasets, eval_datasets = datasets.get_dataset("./data/", conf["type"])
-	
-	server = Server(conf, eval_datasets, compile=conf['compile'])
-	
+	dataset = Dataset(conf)
+	eval_datasets = dataset.eval_dataset
+	server = Server(conf, eval_datasets, compile = conf['compile'])
+	num_clients = conf['f_uav_num']
 	clients = []
-	for uav_id in range(conf['f_uav_num']):
-		clients.append(Client(conf,  train_datasets, uav_id, conf['compile']))
-
-
+	for i in range(num_clients):  
+		clients.append(Client(conf,  dataset.train_dataset, dataset.dataset_indice_list[i], id=i, compile = conf['compile']))
+	
 	df_list = []
 
 	acc, loss = server.model_eval()
@@ -98,7 +93,7 @@ def main(conf):
 		server.model_aggregate(weight_accumulator)
 
 		#-------------------------------------
-		if global_epoch <10 or global_epoch == conf["global_epochs"] - 1:
+		if global_epoch < 10 or global_epoch == conf["global_epochs"] - 1:
 			acc, loss = server.model_eval()#耗时
 			print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}')
 			
