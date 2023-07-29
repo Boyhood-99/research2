@@ -1,4 +1,4 @@
-import argparse, json
+import copy, json
 import datetime
 import torch
 import pandas as pd
@@ -21,6 +21,7 @@ def main(conf):
 	torch.set_float32_matmul_precision('high')
 	
 	date = datetime.datetime.now().strftime('%m-%d')
+	torch.manual_seed(2023)
 
 	# parser = argparse.ArgumentParser(description='Federated Learning')
 	# parser.add_argument('-c', '--config', dest='conf')
@@ -29,9 +30,13 @@ def main(conf):
 	dataset = Dataset(conf)
 	eval_datasets = dataset.eval_dataset
 	server = Server(conf, eval_datasets, compile = conf['compile'])
+	
 	num_clients = conf['f_uav_num']
 	clients = []
+	
 	for i in range(num_clients):  
+		if i == 0:
+			print(dataset.dataset_indice_list[i])
 		clients.append(Client(conf,  dataset.train_dataset, dataset.dataset_indice_list[i], id=i, compile = conf['compile']))
 	
 	df_list = []

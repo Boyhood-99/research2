@@ -1,5 +1,6 @@
 import datetime
 import time
+import copy
 import torch
 from uav import *
 from utils import TrainThread
@@ -16,6 +17,8 @@ class FedAvg():
 
             self.eval_datasets = self.dataset.eval_datasets
             self.server = Server(self.conf, self.eval_datasets, compile=self.conf['compile'])
+            global global_model_init
+            global_model_init = copy.deepcopy(self.server.global_model)
             
             
             num_clients = self.conf['f_uav_num']
@@ -26,10 +29,12 @@ class FedAvg():
             acc, loss = self.server.model_eval()
             self.acc = acc
             self.loss = loss
-    def reset(self,):
+            
+    def reset(self, ):
         # self.server.global_model.__init__() 
         # self.server.global_model.cuda()
-        self.server = Server(self.conf, self.eval_datasets, compile=self.conf['compile'])
+        
+        self.server.global_model = global_model_init
         acc, loss = self.server.model_eval()
         self.acc = acc
         self.loss = loss

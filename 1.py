@@ -1,3 +1,13 @@
+import numpy as np
+def fun1():
+    global a
+    a = np.random.randint(0,10,size=(2,2))
+    print(a)
+def fun2():
+    print(a+5)
+
+fun1()
+fun2()
 
 # import numpy as np
 # import cv2

@@ -54,12 +54,12 @@ class Dataset(object):
         # 进行打乱，比如抽取样本索引为[25，86，34，75],返回给loader可能会变为[34,86,25,75]
         #因此不需要shuffle进行打乱，因为已经打乱了
 
-        dataset_indice_list = []
-        all_range = list(range(len(self.train_dataset)))
-        data_len = int(len(self.train_dataset) / num_clients)
-        for i in range(num_clients):
-            dataset_indice = all_range[i * data_len: (i + 1) * data_len]
-            dataset_indice_list.append(dataset_indice)
+        # dataset_indice_list = []
+        # all_range = list(range(len(self.train_dataset)))
+        # data_len = int(len(self.train_dataset) / num_clients)
+        # for i in range(num_clients):
+        #     dataset_indice = all_range[i * data_len: (i + 1) * data_len]
+        #     dataset_indice_list.append(dataset_indice)
 
         ####利用fedlab生成数据分布------------------------------
         num_classes = 10
@@ -81,7 +81,7 @@ class Dataset(object):
         #                      seed=seed)       
         
         ###均衡IID
-        # cifar10partt = CIFAR10Partitioner(self.train_dataset.targets,
+        # cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
         #                           num_clients,
         #                           balance=True,
         #                           partition="iid",
@@ -103,13 +103,13 @@ class Dataset(object):
         #                             seed=seed)
         
         ###非均衡dirichlet划分
-        # cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
-        #                             num_clients,
-        #                             balance=False,
-        #                             partition="dirichlet",
-        #                             unbalance_sgm=0.3,
-        #                             dir_alpha=0.3,
-        #                             seed=seed)
+        cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
+                                    num_clients,
+                                    balance=False,
+                                    partition="dirichlet",
+                                    unbalance_sgm=0.3,
+                                    dir_alpha=0.3,
+                                    seed=seed)
 
         #####
         # csv_file = f"./partition-reports/cifar10_hetero_dir_0.3_{num_clients}clients.csv"
@@ -118,14 +118,10 @@ class Dataset(object):
         #                 verbose=False, file=csv_file)
 
         #######---------------------------
-        # dataset_indice_list = []
-        # for i in range(num_clients):
-        #     dataset_indice = cifar10part.client_dict[i]
-        #     # if i ==0:
-        #     #     # print("client_dict[0]:",dataset_indice)
-        #     #     pass
-            
-        #     dataset_indice_list.append(dataset_indice)
+        dataset_indice_list = []
+        for i in range(num_clients):
+            dataset_indice = cifar10part.client_dict[i]
+            dataset_indice_list.append(dataset_indice)
 
         ######---------------------------
         return dataset_indice_list
@@ -141,7 +137,9 @@ class Dataset(object):
 # self.train_data = train_images[order]
 # self.train_label = train_labels[order]
 
-
+# if i ==0:
+            #     # print("client_dict[0]:",dataset_indice)
+            #     pass
 
 	
 
