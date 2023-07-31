@@ -23,6 +23,7 @@ class FedAvg():
             
             num_clients = self.conf['f_uav_num']
             self.clients = []
+            np.random.seed(2023)
             for i in range(num_clients):  
                 self.clients.append(Client(self.conf,  self.dataset.train_datasets, self.dataset.dataset_indice_list[i], id=i, compile = self.conf['compile']))
 
@@ -39,7 +40,8 @@ class FedAvg():
         self.acc = acc
         self.loss = loss
         print(f'global Epoch: 0, acc: {self.acc}, loss: {self.loss}')
-    def iteration(self, global_epoch, local_epochs):
+    def iteration(self, global_epoch, local_epochs, auto_lr=None):
+        lr = self.conf['lr'] if auto_lr is None else auto_lr
         begin = time.time()
         date = datetime.datetime.now().strftime('%m-%d')
 
@@ -68,7 +70,8 @@ class FedAvg():
         num_candidate = len(candidates)
         threads = []
         for i in range(num_candidate):
-            thread = TrainThread(candidates[i].local_train(self.server.global_model, global_epoch, local_epochs, name = self.name))
+            thread = TrainThread(candidates[i].local_train(self.server.global_model, global_epoch, 
+                                                           local_epochs, name = self.name, ))
             # thread.setDaemon(True)
             threads.append(thread)
         # for thread in threads:
@@ -92,6 +95,7 @@ class FedAvg():
                 global_epoch_dic[f'f_uav{candidates[i].client_id}'] = loss_dic
             # print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")
         #--------------------------------------------多线程
+
         avg_local_loss = np.array(loss_list).mean()
         
         self.server.model_aggregate(weight_accumulator)

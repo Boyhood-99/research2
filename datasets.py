@@ -1,6 +1,7 @@
 from torchvision import datasets, transforms
 from fedlab.utils.dataset.partition import CIFAR10Partitioner
 from fedlab.utils.functional import partition_report, save_dict
+import numpy as np
 #in-place 操作可能会覆盖计算梯度所需的值。
 
 #每个 in-place 操作实际上都需要重写计算图的实现。out-of-place只是分配新对象并保留对旧计算图的引用，
@@ -17,7 +18,7 @@ class Dataset(object):
         self.conf = conf
         self.train_dataset, self.eval_dataset = self.get_dataset(self.conf['data_dir'], self.conf['type'])
         self.dataset_indice_list = self.get_indice()
-
+        
     def get_dataset(self, dir, name):
 
         if name=='mnist':
@@ -26,27 +27,39 @@ class Dataset(object):
                                 ]) 
             train_dataset = datasets.MNIST(dir, train=True, download=True, transform=transform_train())
             eval_dataset = datasets.MNIST(dir, train=False, transform=transforms.ToTensor())
-            
+
+
+
         elif name=='cifar10':
-            transform_train = transforms.Compose([
-                                transforms.RandomCrop(32, padding=4),
-                                transforms.RandomHorizontalFlip(),
-                                transforms.ToTensor(),
-                                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-            ])
-            # transform_train = transforms.Compose([transforms.Resize((224, 224)),
-            #                 transforms.RandomHorizontalFlip(p=0.5),
-            #                 transforms.ToTensor(),
-            #                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),])
-            
-            transform_test = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),])
-            train_dataset = datasets.CIFAR10(dir, train=True, download=True,transform=transform_train)
-            eval_dataset = datasets.CIFAR10(dir, train=False, transform=transform_test)
-        
+            if True:
+                transform_train = transforms.Compose([
+                                    # transforms.RandomResizedCrop(32, scale=(0.8, 1.0)),
+                                    # transforms.Resize((224, 224)),
+                                    transforms.RandomCrop(32, padding=4),
+                                    transforms.RandomHorizontalFlip(),
+                                    # transforms.RandomRotation((-45,45)), #随机旋转
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+                ])
+                # transform_train = transforms.Compose([transforms.Resize((224, 224)),
+                #                 transforms.RandomHorizontalFlip(p=0.5),
+                #                 transforms.ToTensor(),
+                #                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),])
+                
+                transform_test = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),])
+                train_dataset = datasets.CIFAR10(dir, train=True, download=True,transform=transform_train)
+                eval_dataset = datasets.CIFAR10(dir, train=False, transform=transform_test)
+            else :
+                pass
         return train_dataset, eval_dataset
     
     def get_indice(self,):
         num_clients = self.conf['f_uav_num']
+        num_samples = len(self.train_dataset)
+        print(num_samples)
+        np.random.seed(2023)
+        client_sample_nums  = [np.random.randint(800,1000) for i in range(num_clients)]
+        # client_sample_nums  = [np.array(10000) for i in range(num_clients)]
         ######---------------------------------#客户端平分数据集
         
         #cifar10训练集每个data_batch,10000,其中十个类别是随机独立同分布,
@@ -60,6 +73,7 @@ class Dataset(object):
         # for i in range(num_clients):
         #     dataset_indice = all_range[i * data_len: (i + 1) * data_len]
         #     dataset_indice_list.append(dataset_indice)
+
 
         ####利用fedlab生成数据分布------------------------------
         num_classes = 10
@@ -81,11 +95,11 @@ class Dataset(object):
         #                      seed=seed)       
         
         ###均衡IID
-        # cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
-        #                           num_clients,
-        #                           balance=True,
-        #                           partition="iid",
-        #                           seed=seed)
+        cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
+                                  num_clients,
+                                  balance=True,
+                                  partition="iid",
+                                  seed=seed)
         ###非均衡IID划分
         # cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
         #                             num_clients,
@@ -95,38 +109,114 @@ class Dataset(object):
         #                             seed=seed)
         
         ####均衡dirichlet划分
-        # cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
-        #                             num_clients,
-        #                             balance=True,
-        #                             partition="dirichlet",
-        #                             dir_alpha=0.3,
-        #                             seed=seed)
-        
-        ###非均衡dirichlet划分
+        # print(self.train_dataset.targets[:100])
         cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
                                     num_clients,
-                                    balance=False,
+                                    balance=True,
                                     partition="dirichlet",
-                                    unbalance_sgm=0.3,
                                     dir_alpha=0.3,
+                                    verbose=False,
                                     seed=seed)
+        # print(self.train_dataset.targets[:100])
+        ###非均衡dirichlet划分
+        # cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
+        #                             num_clients,
+        #                             balance=False,
+        #                             partition="dirichlet",
+        #                             unbalance_sgm=0.3,
+        #                             dir_alpha=0.3,
+        #                             seed=seed)
 
         #####
-        # csv_file = f"./partition-reports/cifar10_hetero_dir_0.3_{num_clients}clients.csv"
-        # partition_report(self.train_dataset.targets, cifar10part.client_dict,
-        #                 class_num=num_classes,
-        #                 verbose=False, file=csv_file)
-
+        ######
+        # dataset_indice_list = []
+        # for i in range(num_clients):
+        #     dataset_indice = cifar10part.client_dict[i]
+        #     dataset_indice_list.append(dataset_indice)
         #######---------------------------
-        dataset_indice_list = []
-        for i in range(num_clients):
-            dataset_indice = cifar10part.client_dict[i]
-            dataset_indice_list.append(dataset_indice)
-
+        client_dic = self.client_inner_dirichlet_partition(self.train_dataset.targets, num_clients=num_clients,num_classes=num_classes,
+                                                           dir_alpha=0.3, client_sample_nums=client_sample_nums)
+        
+        # client_dic = self.iid(num_samples=num_samples, client_sample_nums=client_sample_nums)
+        dataset_indice_list = [client_dic[i] for i in range(num_clients)]
         ######---------------------------
         return dataset_indice_list
 
+    def client_inner_dirichlet_partition(self, targets, num_clients, num_classes, dir_alpha,
+                                     client_sample_nums, verbose=False):
+    
+        if not isinstance(targets, np.ndarray):
+            targets = np.array(targets)
+        if not isinstance(client_sample_nums, np.ndarray):
+            client_sample_nums = np.array(client_sample_nums)
 
+        class_priors = np.random.dirichlet(alpha=[dir_alpha] * num_clients,
+                                        size=num_classes)
+        prior_cumsum = np.cumsum(class_priors, axis=1)
+        idx_list = [np.where(targets == i)[0] for i in range(num_classes)]
+
+        class_amount = [len(idx_list[i]) for i in range(num_classes)]
+        client_indices = [np.zeros(client_sample_nums[cid]).astype(np.int64) for cid in
+                        range(num_clients)]
+        
+        while np.sum(client_sample_nums) != 0:
+            curr_class = np.random.randint(num_classes)
+            
+            if verbose:
+                print('Remaining Data: %d' % np.sum(client_sample_nums))
+            # Redraw class label if no rest in current cline samples
+            if class_amount[curr_class] <= 0:
+                    continue
+            class_amount[curr_class] -= 1
+            curr_prior = prior_cumsum[curr_class]
+            while True:
+                curr_cid = np.argmax(np.random.uniform() <= curr_prior)
+                # If current node is full resample a client
+                
+                if client_sample_nums[curr_cid] <= 0:
+                    continue
+                client_sample_nums[curr_cid] -= 1
+                client_indices[curr_cid][client_sample_nums[curr_cid]] = \
+                    idx_list[curr_class][class_amount[curr_class]]
+
+                break
+        client_dict = {cid: client_indices[cid] for cid in range(num_clients)}
+        return client_dict
+    
+        ####
+        # class_priors = np.random.dirichlet(alpha=[dir_alpha] * num_classes,
+        #                                 size=num_clients)
+        # while np.sum(client_sample_nums) != 0:
+        #     curr_cid = np.random.randint(num_clients)
+            
+        #     if verbose:
+        #         print('Remaining Data: %d' % np.sum(client_sample_nums))
+        #     # If current node is full resample a client
+        #     if client_sample_nums[curr_cid] <= 0:
+        #         continue
+        #     client_sample_nums[curr_cid] -= 1
+        #     curr_prior = prior_cumsum[curr_cid]
+        #     while True:
+        #         curr_class = np.argmax(np.random.uniform() <= curr_prior)
+        #         # Redraw class label if no rest in current class samples
+        #         if class_amount[curr_class] <= 0:
+        #             continue
+        #         class_amount[curr_class] -= 1
+        #         client_indices[curr_cid][client_sample_nums[curr_cid]] = \
+        #             idx_list[curr_class][class_amount[curr_class]]
+
+        #         break
+    def iid(self, num_samples, client_sample_nums):
+        rand_perm = np.random.permutation(num_samples)
+        num_cumsum = np.cumsum(client_sample_nums).astype(int)
+        client_dict = self.split_indices(num_cumsum, rand_perm)
+        return client_dict
+    
+    def split_indices(self, num_cumsum, rand_perm):
+        client_indices_pairs = [(cid, idxs) for cid, idxs in
+                                enumerate(np.split(rand_perm, num_cumsum)[:-1])]
+        client_dict = dict(client_indices_pairs)
+        return client_dict
 
 # labels = np.argmax(train_labels, axis=1)
 # # 对数据标签进行排序

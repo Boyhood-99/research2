@@ -6,8 +6,8 @@
 	"data_dir" :"./data",
 	"type" : "cifar10",
 
-	"#lr" : 0.01,
-	"lr" : 0.005,
+	"lr" : 0.05,
+	"#lr" : 0.005,
 	
 	"momentum" : 0.0001,
 	
@@ -17,7 +17,7 @@
 	
 	"f_uav_num" : 5,
 	
-	"global_epochs" : 20,
+	"global_epochs" : 40,
 	
 	"local_epochs" : 2,
 	"#local_epochs" : 5,

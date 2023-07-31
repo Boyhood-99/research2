@@ -64,6 +64,10 @@ class Environment(object):
         self.local_epochs_min = 2
         self.local_epochs_max = 10
 
+        self.auto_lr= 5
+        self.auto_lr_min = 0.01
+        self.auto_lr_max = 0.1
+
         self.step_num = 0
         
         self.systemmodel = SystemModel(f_uav_num = self.f_uav_num)
@@ -293,11 +297,11 @@ class Environment2(Environment):
         action[2] = math.ceil((self.local_epochs_max-self.local_epochs_min)/2*action[2] + (self.local_epochs_max + self.local_epochs_min)/2)
         # action[3:6] = action[3:6]
         action[5] = (self.alpha_z_max-self.alpha_z_min)/2*action[5] + (self.alpha_z_max + self.alpha_z_min)/2 
-        alpha = action[3:]
-
+        alpha = action[3:6]
+        auto_lr = (self.auto_lr_max-self.auto_lr_min)/2*action[6] + (self.auto_lr_max + self.auto_lr_min)/2
         #####
         local_epochs = int(action[2])
-        global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, local_epochs)
+        global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, local_epochs, auto_lr)
 
         #####
        

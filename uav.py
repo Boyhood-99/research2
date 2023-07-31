@@ -5,9 +5,10 @@ import torch
 from torchsummary import summary
 from torchstat import stat
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
-
+# import mmdet.models.losses.focal_loss as focal_loss
 
 class Server(object):
 	
@@ -84,6 +85,9 @@ class Client(object):
 		# summary(self.local_model, input_size=(3, 32, 32))
 		#-----------------------------------------------------
 		self.local_model = models.resnet18(weights =models.ResNet18_Weights.DEFAULT)
+		# for param in self.local_model.parameters():
+		# 	param.requires_grad = False
+
 		inchannel = self.local_model.fc.in_features
 		self.local_model.fc = nn.Linear(inchannel, 10)
 		if torch.cuda.is_available():
@@ -99,32 +103,58 @@ class Client(object):
 
 		####------------------------------------
 		#自定义样本数量
-		# num_sample = np.random.randint(800,1000)
-		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  
-		# 		      		num_workers=2, drop_last =True, pin_memory=True,
-		# 					sampler = DATA.sampler.SubsetRandomSampler(
-		# 					list(np.random.choice(dataset_indice, num_sample)))
-		# 					# shuffle=True,
-		# 					)
+		self.num_sample = np.random.randint(800,1000)
+		self.ls = list(np.random.choice(dataset_indice, self.num_sample))
+		
+		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  
+				      		num_workers=2, drop_last =True, pin_memory=True,
+							sampler = DATA.sampler.SubsetRandomSampler(self.ls),
+							# shuffle=True,
+							)
             
         ###----------------------------------
 		
-		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], 
-				      		num_workers=2, drop_last =True, pin_memory=True, 
-							sampler=DATA.sampler.SubsetRandomSampler(dataset_indice),
-							)
+		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], 
+		# 		      		num_workers=2, drop_last =True, pin_memory=True, 
+		# 					sampler=DATA.sampler.SubsetRandomSampler(dataset_indice),
+		# 					)
 				      		
-
+		###----------------
 		self.optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'],
 									momentum=self.conf['momentum'],
-									# weight_decay = 1e-4,
+									weight_decay = 1e-3,#1e-4,1e-3
 									)
-		# self.lossfun =  torch.nn.functional.cross_entropy()
+		
+		# self.optimizer = torch.optim.SGD([
+		# 	{'params': self.local_model.fc.parameters()},
+        # 	{'params': self.local_model.layer4.parameters()},
+		# 	{'params': self.local_model.layer3.parameters()},
+		# 	{'params': self.local_model.layer2.parameters()},
+		# 	{'params': self.local_model.layer1.parameters()},
+		# 	{'params': self.local_model.conv1.parameters()},
+		# 	], 
+		# 	lr=self.conf['lr'],
+		# 	momentum=self.conf['momentum'],
+		# 	# weight_decay = 1e-4,
+		# 	)
+		#####--------------------------
+		# self.criterion =  torch.nn.functional.cross_entropy(label_smoothing=0.001)
+		self.criterion = torch.nn.CrossEntropyLoss(
+			# label_smoothing=0.2,
+					     )
+		
+		self.criterion = FocalLoss()
 
+		# self.criterion = focal_loss()
+
+	def get_indice(self,):
+		print(self.num_sample)
+		print(self.ls)
+		return self.num_sample, self.ls
 	def local_train(self, global_model, global_epoch, local_epochs, name = None):
 
-		for name, param in global_model.state_dict().items():
-			self.local_model.state_dict()[name].copy_(param.clone())
+		for pm_name, param in global_model.state_dict().items():
+			self.local_model.state_dict()[pm_name].copy_(param.clone())
 		
 		self.local_model.train()
 		loss_dic = {}
@@ -138,17 +168,15 @@ class Client(object):
 					data = data.cuda()
 					target = target.cuda()
 			
-
-			
 				self.optimizer.zero_grad()
 				#前向传播
 				output = self.local_model(data)
-				loss = torch.nn.functional.cross_entropy(output, target)
+				# loss = torch.nn.functional.cross_entropy(output, target)
+				loss = self.criterion(output, target)
 				if name == 'FedProx':
 					proximal_term = 0.0
 					for w, w_t in zip(self.local_model.parameters(), global_model.parameters()):
 						proximal_term += (w - w_t).norm(2)
-
 					loss = loss + (self.conf['mu'] / 2) * proximal_term
 
 				#反向传播
@@ -168,4 +196,23 @@ class Client(object):
 			# diff[name] = data.sub_(global_model.state_dict()[name])
 			
 		return diff , loss_dic
-		
+	
+
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=1, gamma=2, reduction='mean'):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none')
+        pt = torch.exp(-ce_loss)
+        focal_loss = self.alpha * (1 - pt) ** self.gamma * ce_loss
+
+        if self.reduction == 'mean':
+            return focal_loss.mean()
+        elif self.reduction == 'sum':
+            return focal_loss.sum()
+        else:
+            return focal_loss

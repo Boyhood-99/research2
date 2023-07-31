@@ -33,11 +33,13 @@ def main(conf):
 	
 	num_clients = conf['f_uav_num']
 	clients = []
-	
+	np.random.seed(2023)
 	for i in range(num_clients):  
-		if i == 0:
-			print(dataset.dataset_indice_list[i])
-		clients.append(Client(conf,  dataset.train_dataset, dataset.dataset_indice_list[i], id=i, compile = conf['compile']))
+		_ = Client(conf,  dataset.train_dataset, dataset.dataset_indice_list[i], id=i, compile = conf['compile'])
+		clients.append(_)
+		# if i == 1 or i == 2:
+		# 	_, _ = _.get_indice()
+			# print(dataset.dataset_indice_list[i])
 	
 	df_list = []
 
@@ -72,7 +74,9 @@ def main(conf):
 		num_candidate = len(candidates)
 		threads = []
 		for i in range(num_candidate):
-			thread = TrainThread(candidates[i].local_train(server.global_model, global_epoch, conf['local_epochs']))
+			thread = TrainThread(candidates[i].local_train(server.global_model, global_epoch, conf['local_epochs'], 
+						#   name='FedProx',
+			 				) )
 			# thread.setDaemon(True)
 			threads.append(thread)
 		# for thread in threads:
@@ -118,7 +122,7 @@ def main(conf):
 		df_list.append(global_epoch_dic)
 
 	df = pd.DataFrame(df_list)
-	df.to_csv(f'log{date}.csv')
+	df.to_csv(f'./log/log{date}.csv')
 	date = datetime.datetime.now().strftime('%m-%d')
 	flvisual(df, date, path = f'./FL_main/fig_7_16.png')
 	return df
