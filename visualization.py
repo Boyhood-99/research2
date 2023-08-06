@@ -1,12 +1,37 @@
 import matplotlib.pyplot as plt
-
-import matplotlib.pyplot as plt
-
+import os
 import numpy as np
 from matplotlib.patches import ConnectionPatch
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 
-def flvisual(df, flag, path = f'./FL/fig_7_16.png'):
+
+def data_dis_visual(df_list, flag = None, diretory = f'./data_dis/'):
+    # df = pd.read_csv('./log07-05.csv')
+    fig1, ax1 = plt.subplots()
+    fig2, ax2 = plt.subplots()
+    for df, dir_alpha in df_list:
+        glo_acc = list(df['global_accuracy'])
+        glo_loss = list(df['global_loss'])
+
+
+        axis1, = ax1.plot(glo_acc, label = f'$η$ = {dir_alpha}')
+        axis2, = ax2.plot(glo_loss, label = f'$η$ = {dir_alpha}')
+
+    ax1.legend()
+    ax2.legend()
+    ax1.set_xlabel('Global epoch')
+    ax1.set_ylabel('Accuracy')
+        
+    ax2.set_xlabel('Global epoch')
+    ax2.set_ylabel('Loss')
+
+    if not os.path.exists(diretory):
+        os.makedirs(diretory)  
+    fig1.savefig(os.path.join(diretory, 'acc.png'))
+    fig2.savefig(os.path.join(diretory, 'loss.png'))
+
+
+def flvisual(df, time, diretory = f'./FL/'):
     # df = pd.read_csv('./log07-05.csv')
     glo_acc = list(df['global_accuracy'])
     glo_loss = list(df['global_loss'])
@@ -22,7 +47,7 @@ def flvisual(df, flag, path = f'./FL/fig_7_16.png'):
     ax2.set_ylabel('loss')
 
     plt.legend([axis1, axis2], ['accuracy', 'loss'])
-    plt.savefig(path)
+    plt.savefig(os.path.join(diretory, f'{time}.png'))
 
 def rlvisual(f_uav_num, config_draw, reward_ls):
     

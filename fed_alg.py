@@ -10,10 +10,10 @@ writer = SummaryWriter('./tensorboard/log/')
 from datasets import Dataset
 
 class FedAvg():
-    def __init__(self, conf,  ) -> None:
+    def __init__(self, conf,  dir_alpha=0.3) -> None:
             self.name = 'FedAvg'
             self.conf = conf
-            self.dataset = Dataset(self.conf)
+            self.dataset = Dataset(self.conf, dir_alpha=dir_alpha)
 
             self.eval_datasets = self.dataset.eval_datasets
             self.server = Server(self.conf, self.eval_datasets, compile=self.conf['compile'])
@@ -37,9 +37,17 @@ class FedAvg():
         
         self.server.global_model = global_model_init
         acc, loss = self.server.model_eval()
+        print(f'global Epoch: 0, acc: {self.acc}, loss: {self.loss}')
+
         self.acc = acc
         self.loss = loss
-        print(f'global Epoch: 0, acc: {self.acc}, loss: {self.loss}')
+        # df_list = []
+        self.global_epoch_dic = {}  ##for print log
+        self.global_epoch_dic['global Epoch'] = 0
+        self.global_epoch_dic['global_accuracy'] = acc
+        self.global_epoch_dic['global_loss'] = loss
+        # df_list.append(self.global_epoch_dic)
+        return self.global_epoch_dic
     def iteration(self, global_epoch, local_epochs, auto_lr=None):
         lr = self.conf['lr'] if auto_lr is None else auto_lr
         begin = time.time()
@@ -53,8 +61,8 @@ class FedAvg():
         for name, params in self.server.global_model.state_dict().items():
             weight_accumulator[name] = torch.zeros_like(params)
 
-        global_epoch_dic = {}#for print log
-        global_epoch_dic['global Epoch'] = global_epoch
+        self.global_epoch_dic = {}#for print log
+        self.global_epoch_dic['global Epoch'] = global_epoch
         ####
 
         #---------------------------------------单线程，主要是local_train耗时
@@ -92,7 +100,7 @@ class FedAvg():
             
             for name, params in self.server.global_model.state_dict().items():
                 weight_accumulator[name].add_(diff[name])
-                global_epoch_dic[f'f_uav{candidates[i].client_id}'] = loss_dic
+                # self.global_epoch_dic[f'f_uav{candidates[i].client_id}'] = loss_dic
             # print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")
         #--------------------------------------------多线程
 
@@ -119,10 +127,10 @@ class FedAvg():
         print(f'global Epoch: {global_epoch +1}, acc: {acc}, loss: {loss}, time: {diff_time}')
         
         
-        global_epoch_dic['global_accuracy'] = acc
-        global_epoch_dic['global_loss'] = loss
+        self.global_epoch_dic['global_accuracy'] = acc
+        self.global_epoch_dic['global_loss'] = loss
         
-        return global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss
+        return self.global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss
 
 
 class FedProx(FedAvg):

@@ -20,7 +20,10 @@ class Server(object):
 		# input = torch.tensor
 		# summary(self.global_model, input_size=(3, 32, 32))
 		#-------------------------------------------
-		self.global_model = models.resnet18(weights =models.ResNet18_Weights.DEFAULT)
+		self.global_model = models.resnet18(
+			# weights = None,
+			weights =models.ResNet18_Weights.DEFAULT,
+			)
 		inchannel = self.global_model.fc.in_features
 		self.global_model.fc = nn.Linear(inchannel, 10)
 		if torch.cuda.is_available():
@@ -84,7 +87,11 @@ class Client(object):
 		# self.local_model = models_1.get_model(self.conf["model_name"]) 
 		# summary(self.local_model, input_size=(3, 32, 32))
 		#-----------------------------------------------------
-		self.local_model = models.resnet18(weights =models.ResNet18_Weights.DEFAULT)
+		self.local_model = models.resnet18(
+						# weights =None,
+				     weights= models.ResNet18_Weights.DEFAULT,
+					 	)
+		
 		# for param in self.local_model.parameters():
 		# 	param.requires_grad = False
 
@@ -103,23 +110,23 @@ class Client(object):
 
 		####------------------------------------
 		#自定义样本数量
-		self.num_sample = np.random.randint(800,1000)
-		self.ls = list(np.random.choice(dataset_indice, self.num_sample))
+		# self.num_sample = np.random.randint(800,1000)
+		# self.ls = list(np.random.choice(dataset_indice, self.num_sample, replace=False))
 		
-		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  
-				      		num_workers=2, drop_last =True, pin_memory=True,
-							sampler = DATA.sampler.SubsetRandomSampler(self.ls),
-							# shuffle=True,
-							)
+		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size = conf["batch_size"],  
+		# 		      		num_workers=2, drop_last =True, pin_memory=True,
+		# 					sampler = DATA.sampler.SubsetRandomSampler(self.ls),
+		# 					# shuffle=True,
+		# 					)
             
         ###----------------------------------
 		
-		# self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], 
-		# 		      		num_workers=2, drop_last =True, pin_memory=True, 
-		# 					sampler=DATA.sampler.SubsetRandomSampler(dataset_indice),
-		# 					)
+		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], 
+				      		num_workers=2, drop_last =True, pin_memory=True, 
+							sampler=DATA.sampler.SubsetRandomSampler(dataset_indice),
+							)
 				      		
-		###----------------
+		###----------------------------------
 		self.optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'],
 									momentum=self.conf['momentum'],
 									weight_decay = 1e-3,#1e-4,1e-3
@@ -146,6 +153,15 @@ class Client(object):
 		self.criterion = FocalLoss()
 
 		# self.criterion = focal_loss()
+
+		print(f'client {self.client_id}   dataset_size:{len(dataset_indice)}')
+		# print(f'dataset_indice:{dataset_indice}')
+		dataset_indice_dic = {}
+		for i in dataset_indice:
+			key = self.train_dataset.targets[i]
+			dataset_indice_dic[key] = dataset_indice_dic.get(key, 0) + 1	
+		f = sorted(zip(dataset_indice_dic.keys(), dataset_indice_dic.values()), key=lambda x: x[0], reverse=True)
+		print(f'{f}')
 
 	def get_indice(self,):
 		print(self.num_sample)

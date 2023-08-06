@@ -243,10 +243,13 @@ class Environment2(Environment):
         self.train_datasets, self.eval_datasets = datasets.get_dataset("./data/", conf["type"])
         self.fl = FedAvg(conf = self.conf, train_datasets = self.train_datasets, eval_datasets = self.eval_datasets)
         self.systemmodel = SystemModel2()
-        
+        self.df_list = []
     def reset(self):
+        
         self.step_num = 0
-        self.fl.reset()
+        global_epoch_dic = self.fl.reset()
+        self.df_list.append(global_epoch_dic)
+        
         
         #随机初始化底层无人机位置，范围{0，1000}
         # self.f_uav_location = np.random.uniform(0, 20, size = (self.f_uav_num, 3))
@@ -302,6 +305,8 @@ class Environment2(Environment):
         #####
         local_epochs = int(action[2])
         global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, local_epochs, auto_lr)
+
+        self.df_list.append(global_epoch_dic)
 
         #####
        
@@ -388,16 +393,17 @@ class Environment2(Environment):
     
         # reward1 = np.min(gain)
         reward_settle = 0
-        energy_consum = np.array(( - fly_time) * self.systemmodel.p_fly(action[0])/ 100) 
+        energy_consum = np.array(( - fly_time) * self.systemmodel.p_fly(action[0])/ 1000) 
         acc_increase = diff_acc
         acc_increase = 0
         loss_decrease = -diff_loss 
-        # loss_decrease = 0
+        loss_decrease = 0
         reward5 = - avg_local_loss
-        reward5 = 0
+        # reward5 = 0
 
 
         #结算奖励
+        ##已设置为0
         if done :
             reward_settle += self.end_reward
             self.num_episode += 1
@@ -409,8 +415,10 @@ class Environment2(Environment):
         d = deepcopy(np.max(distance))
         reward = reward_settle + energy_consum + acc_increase + loss_decrease + reward5
         
-        return self.state, reward, energy_consum, acc_increase, loss_decrease, done, global_epoch_dic,\
+        return self.state, reward, energy_consum, acc_increase, loss_decrease, done, \
             l, f, d, np.max(t_up_ + t_down_), np.max(t_comp + t_up_ + t_down_)
+    def get_dflist(self, ):
+        return self.df_list
 
 #state space based on distance
 class Environment1(Environment):

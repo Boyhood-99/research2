@@ -54,7 +54,7 @@ class AgentSAC():
         s = self.reset()
         s = self.z(s)
         actions = []
-        acc_loss_test = []
+        
         energy_consum = 0 
         acc_increase = 0
         loss_decrease = 0
@@ -64,7 +64,7 @@ class AgentSAC():
             else:
                 a = self.sac.choose_action(s)             
             action=deepcopy(a)          
-            s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,global_epoch_dic,l, f , _, _, _, = self.env.step(self.step_num, action)
+            s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,l, f , _, _, _, = self.env.step(self.step_num, action)
             ###
 
             ###
@@ -81,7 +81,6 @@ class AgentSAC():
                     action_dic['alpha']  = action[3:]
                 actions.append(action_dic)
                 ###
-                acc_loss_test.append(global_epoch_dic)
             self.step_num+=1
             self.ep_reward += r
             energy_consum +=  energy_consum_
@@ -90,10 +89,11 @@ class AgentSAC():
             s=s_
             if done:
                 break
+        
         print(f'Episode: {i}  Reward: {self.ep_reward} Step_sum:  {self.step_num} \
               timetotal: {self.env.time_total} energy_consum:{energy_consum}')
         if test:
-            return self.ep_reward, energy_consum, actions, acc_loss_test
+            return self.ep_reward, energy_consum, actions, self.env.get_dflist()
         else:
             return self.ep_reward, energy_consum
         

@@ -10,12 +10,12 @@ from utils import TrainThread
 from configuration import ConfigDraw, ConfigTrain
 from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
-from visualization import flvisual
+from visualization import flvisual, data_dis_visual
 writer = SummaryWriter('./tensorboard/log/')
 
 #global Epoch: 4, acc: 72.61999999999999, loss: 0.8394354427337647
 
-def main(conf):
+def main(conf, dir_alpha = 0.3):
 	# torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
 	# torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
 	torch.set_float32_matmul_precision('high')
@@ -27,7 +27,7 @@ def main(conf):
 	# parser.add_argument('-c', '--config', dest='conf')
 	# args = parser.parse_args()
 	
-	dataset = Dataset(conf)
+	dataset = Dataset(conf, dir_alpha=dir_alpha)
 	eval_datasets = dataset.eval_dataset
 	server = Server(conf, eval_datasets, compile = conf['compile'])
 	
@@ -44,6 +44,12 @@ def main(conf):
 	df_list = []
 
 	acc, loss = server.model_eval()
+
+	# global_epoch_dic['global Epoch'] = global_epoch
+	global_epoch_dic = {}
+	global_epoch_dic['global_accuracy'] = acc
+	global_epoch_dic['global_loss'] = loss
+	df_list.append(global_epoch_dic)
 	
 	print(f'global Epoch: 0, acc: {acc}, loss: {loss}')
 	for global_epoch in tqdm(range(conf["global_epochs"])):
@@ -52,7 +58,12 @@ def main(conf):
 		# candidates = clients
 		candidates = []
 		for i in conf['candidates']:
-			candidates.append(clients[i])		
+			candidates.append(clients[i])	
+
+		local_epochs = np.random.randint(2, 11)	
+		print(local_epochs)
+		# local_epochs = conf['local_epochs']
+		
 		weight_accumulator = {}
 		for name, params in server.global_model.state_dict().items():
 			weight_accumulator[name] = torch.zeros_like(params)
@@ -74,7 +85,8 @@ def main(conf):
 		num_candidate = len(candidates)
 		threads = []
 		for i in range(num_candidate):
-			thread = TrainThread(candidates[i].local_train(server.global_model, global_epoch, conf['local_epochs'], 
+			thread = TrainThread(candidates[i].local_train(server.global_model, global_epoch, 
+						  local_epochs=local_epochs, 
 						#   name='FedProx',
 			 				) )
 			# thread.setDaemon(True)
@@ -122,14 +134,24 @@ def main(conf):
 		df_list.append(global_epoch_dic)
 
 	df = pd.DataFrame(df_list)
-	df.to_csv(f'./log/log{date}.csv')
-	date = datetime.datetime.now().strftime('%m-%d')
-	flvisual(df, date, path = f'./FL_main/fig_7_16.png')
+	# df.to_csv(f'./log/log{date}.csv')
+	# date = datetime.datetime.now().strftime('%m-%d')
+	ts = time.time()
+	flvisual(df, ts, )
 	return df
 
 if __name__ == '__main__':
+    # for test data_dis_visual
+    # ls1 = [{'global_accuracy':1, 'global_loss':2}, {'global_accuracy':3, 'global_loss':5},]
+    # ls2 = [{'global_accuracy':5, 'global_loss':6}, {'global_accuracy':4, 'global_loss':5},]
+    # df1 = pd.DataFrame(ls1)
+    # df2 = pd.DataFrame(ls2)
+    # df_list = [(df1, 1), (df2, 2)]
+    # data_dis_visual(df_list=df_list)
+    
 	# date = datetime.datetime.now().strftime('%H:%M:%S')
 	# print(date)
+	
     print(torch.cuda.is_available())
     print(torch.__version__)
     # torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
@@ -140,11 +162,15 @@ if __name__ == '__main__':
     config_train = ConfigTrain
     config_draw = ConfigDraw
     conf['config_train'] = config_train
-    conf["config_draw"] = config_draw 
-   
-    main(conf=conf)
+    conf["config_draw"] = config_draw
+    
+
+    df1 = main(conf=conf, dir_alpha=0.3)
+    df2 = main(conf=conf, dir_alpha=1)
+    df3 = main(conf=conf, dir_alpha=10)
+    df_list = [(df1, 0.3), (df2, 1), (df3, 10)]
+    data_dis_visual(df_list=df_list)
         
-			
 		
 		
 	

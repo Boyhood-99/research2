@@ -14,10 +14,10 @@ import numpy as np
 #输出特征图高度 = （输入特征图高度 - 池化窗口高度）/ 步幅 + 1
 #输出特征图宽度 = （输入特征图宽度 - 池化窗口宽度）/ 步幅 + 1
 class Dataset(object):
-    def __init__(self, conf) -> None:
+    def __init__(self, conf, dir_alpha = 0.3) -> None:
         self.conf = conf
         self.train_dataset, self.eval_dataset = self.get_dataset(self.conf['data_dir'], self.conf['type'])
-        self.dataset_indice_list = self.get_indice()
+        self.dataset_indice_list = self.get_indice(dir_alpha)
         
     def get_dataset(self, dir, name):
 
@@ -53,7 +53,7 @@ class Dataset(object):
                 pass
         return train_dataset, eval_dataset
     
-    def get_indice(self,):
+    def get_indice(self, dir_alpha):
         num_clients = self.conf['f_uav_num']
         num_samples = len(self.train_dataset)
         print(num_samples)
@@ -134,34 +134,43 @@ class Dataset(object):
         #     dataset_indice = cifar10part.client_dict[i]
         #     dataset_indice_list.append(dataset_indice)
         #######---------------------------
+        print(client_sample_nums)
         client_dic = self.client_inner_dirichlet_partition(self.train_dataset.targets, num_clients=num_clients,num_classes=num_classes,
-                                                           dir_alpha=0.3, client_sample_nums=client_sample_nums)
+                                                           dir_alpha=dir_alpha, client_sample_nums=client_sample_nums)
         
         # client_dic = self.iid(num_samples=num_samples, client_sample_nums=client_sample_nums)
         dataset_indice_list = [client_dic[i] for i in range(num_clients)]
         ######---------------------------
+        for i in range(len(dataset_indice_list)):
+            for j in range(i+1, len(dataset_indice_list)):
+                set_c = set(dataset_indice_list[i]) & set(dataset_indice_list[j])
+                # assert not set_c  , "存在相同元素"
+                assert len(set_c) == 0, "存在同一元素"
+
         return dataset_indice_list
 
     def client_inner_dirichlet_partition(self, targets, num_clients, num_classes, dir_alpha,
-                                     client_sample_nums, verbose=False):
-    
+                                     client_sample_nums, verbose=False, seed=2023):
+        np.random.seed(seed)
         if not isinstance(targets, np.ndarray):
             targets = np.array(targets)
         if not isinstance(client_sample_nums, np.ndarray):
             client_sample_nums = np.array(client_sample_nums)
 
-        class_priors = np.random.dirichlet(alpha=[dir_alpha] * num_clients,
+        client_priors = np.random.dirichlet(alpha=[dir_alpha] * num_clients,
                                         size=num_classes)
-        prior_cumsum = np.cumsum(class_priors, axis=1)
+        prior_cumsum = np.cumsum(client_priors, axis=1)
         idx_list = [np.where(targets == i)[0] for i in range(num_classes)]
 
         class_amount = [len(idx_list[i]) for i in range(num_classes)]
         client_indices = [np.zeros(client_sample_nums[cid]).astype(np.int64) for cid in
                         range(num_clients)]
-        
+        print('总样本数：', np.sum(client_sample_nums))
+        i = 0
+        j = 0
         while np.sum(client_sample_nums) != 0:
             curr_class = np.random.randint(num_classes)
-            
+            i +=1
             if verbose:
                 print('Remaining Data: %d' % np.sum(client_sample_nums))
             # Redraw class label if no rest in current cline samples
@@ -175,11 +184,14 @@ class Dataset(object):
                 
                 if client_sample_nums[curr_cid] <= 0:
                     continue
+                j +=1
                 client_sample_nums[curr_cid] -= 1
                 client_indices[curr_cid][client_sample_nums[curr_cid]] = \
                     idx_list[curr_class][class_amount[curr_class]]
 
                 break
+        print('循环取样个数，大于等于总样本数', i)
+        print('赋值个数，应该等于总样本数' , j)
         client_dict = {cid: client_indices[cid] for cid in range(num_clients)}
         return client_dict
     

@@ -17,10 +17,12 @@
 	
 	"f_uav_num" : 5,
 	
-	"global_epochs" : 40,
+	"global_epochs" : 20,
 	
 	"local_epochs" : 2,
 	"#local_epochs" : 5,
+	"local_epochs_min":2,
+	"local_epochs_max":10,
 	
 	"candidates" : [0,1,2,3,4],
 	

@@ -2,14 +2,13 @@ import numpy as np
 # client_indices = [np.zeros(client_sample_nums[cid]).astype(np.int64) for cid in
 #                       range(num_clients)]
 s = np.random.dirichlet((10, 5, 3), 5)#.transpose()
-print(np.sum(s[0]))
+# print(np.sum(s[0]))
 
 #用法二
 a = np.array([2,4,6,8,10,7,2])
 #只有一个参数表示条件的时候
-print(np.argwhere(a ==2).flatten())
-
-
+# print(np.argwhere(a ==2).flatten())
+print(np.random.choice(5, 3,replace=False))
 
 # import numpy as np
 # import cv2
