@@ -8,8 +8,15 @@ s = np.random.dirichlet((10, 5, 3), 5)#.transpose()
 a = np.array([2,4,6,8,10,7,2])
 #只有一个参数表示条件的时候
 # print(np.argwhere(a ==2).flatten())
-print(np.random.choice(5, 3,replace=False))
+# print(np.random.choice(5, 3,replace=False))
 
+class_priors = np.random.dirichlet(alpha=[0.1] * 5,
+                                        size=10)
+prior_cumsum = np.cumsum(class_priors, axis=1)
+
+
+# print(class_priors)
+# print(prior_cumsum)
 # import numpy as np
 # import cv2
 

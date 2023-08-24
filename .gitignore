@@ -1,12 +1,12 @@
 #dir
 data/
-FL/
-FL_main/
-SAC/
-csv/
-data_dis/
+# FL/
+# FL_main/
+# SAC/
+# csv/
+# data_dis/
 tensorboard/log/
-*.csv
+# *.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

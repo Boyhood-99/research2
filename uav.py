@@ -26,9 +26,11 @@ class Server(object):
 			)
 		inchannel = self.global_model.fc.in_features
 		self.global_model.fc = nn.Linear(inchannel, 10)
+		#----------------------------------------
 		if torch.cuda.is_available():
 			self.global_model.cuda()
-		#----------------------------------------
+		# summary(self.global_model, input_size=(3, 32, 32))
+
 		if compile:
 			self.global_model = torch.compile(self.global_model) 
 		
@@ -78,11 +80,13 @@ class Server(object):
 class Client(object):
 
 	def __init__(self, conf, train_dataset, dataset_indice, id = -1, compile = False):
+		
 
 		# self.location = torch.zeros(size=(3))
 		
 		self.conf = conf
-		
+		self.dataset_indice = dataset_indice
+		self.datasize = len(self.dataset_indice)
 		###
 		# self.local_model = models_1.get_model(self.conf["model_name"]) 
 		# summary(self.local_model, input_size=(3, 32, 32))
@@ -121,9 +125,11 @@ class Client(object):
             
         ###----------------------------------
 		
-		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=conf["batch_size"], 
-				      		num_workers=2, drop_last =True, pin_memory=True, 
-							sampler=DATA.sampler.SubsetRandomSampler(dataset_indice),
+		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=self.conf["batch_size"], 
+				      		num_workers=2, 
+							drop_last =True,
+							pin_memory=True, 
+							sampler=DATA.sampler.SubsetRandomSampler(self.dataset_indice),
 							)
 				      		
 		###----------------------------------
@@ -147,13 +153,16 @@ class Client(object):
 		#####--------------------------
 		# self.criterion =  torch.nn.functional.cross_entropy(label_smoothing=0.001)
 		self.criterion = torch.nn.CrossEntropyLoss(
+			label_smoothing=0.005,
 			# label_smoothing=0.2,
 					     )
 		
-		self.criterion = FocalLoss()
+		# self.criterion = FocalLoss()
 
 		# self.criterion = focal_loss()
 
+		self.prev_grads = self.init_prev_grads()
+		######可视化数据
 		print(f'client {self.client_id}   dataset_size:{len(dataset_indice)}')
 		# print(f'dataset_indice:{dataset_indice}')
 		dataset_indice_dic = {}
@@ -163,10 +172,6 @@ class Client(object):
 		f = sorted(zip(dataset_indice_dic.keys(), dataset_indice_dic.values()), key=lambda x: x[0], reverse=True)
 		print(f'{f}')
 
-	def get_indice(self,):
-		print(self.num_sample)
-		print(self.ls)
-		return self.num_sample, self.ls
 	def local_train(self, global_model, global_epoch, local_epochs, name = None):
 
 		for pm_name, param in global_model.state_dict().items():
@@ -213,6 +218,60 @@ class Client(object):
 			
 		return diff , loss_dic
 	
+
+	def train_FedDyn(self, global_model,  prev_grads,  local_epochs, name = None):
+		self.local_model.train()
+		epoch_loss = []
+
+		par_flat = None         # theta t-1
+		for name_, param in global_model.named_parameters():
+			if not isinstance(par_flat, torch.Tensor):
+				par_flat = param.view(-1)
+			else:
+				par_flat = torch.cat((par_flat, param.view(-1)), dim=0)
+
+		for i in range(local_epochs):
+			batch_loss = []
+			for batch_index, (data, target) in enumerate(self.train_loader):
+				if torch.cuda.is_available():
+					data = data.cuda()
+					target = target.cuda()
+			
+				self.optimizer.zero_grad()
+				output = self.local_model(data)
+				
+				loss_a = self.criterion(output, target)
+			
+				# === Dynamic regularization === #
+
+				curr_params = torch.cat([p.reshape(-1) for p in self.local_model.parameters()])
+				lin_penalty = torch.sum(curr_params * prev_grads)
+
+				norm_penalty = (self.conf['feddyn_alpha']/ 2.0) * torch.linalg.norm(curr_params - par_flat, 2) ** 2
+
+				loss_b = loss_a - lin_penalty + norm_penalty
+				loss = loss_b
+				# epoch_loss['Quad Penalty'] = quad_penalty.item()
+				loss.backward(retain_graph=True)
+
+				torch.nn.utils.clip_grad_norm_(parameters=self.local_model.parameters(), max_norm=10)
+
+				self.optimizer.step()
+				batch_loss.append(loss.item())
+			epoch_loss.append(sum(batch_loss) / len(batch_loss))
+
+		cur_flat = torch.cat([p.detach().reshape(-1) for p in self.local_model.parameters()])
+		prev_grads -= self.conf['feddyn_alpha'] * (cur_flat - par_flat)    # ht
+		return sum(epoch_loss) / len(epoch_loss), prev_grads
+
+	def init_prev_grads(self, ):
+		prev_grads = None
+		for param in self.local_model.parameters():
+			if not isinstance(prev_grads, torch.Tensor):
+				prev_grads = torch.zeros_like(param.view(-1))
+			else:
+				prev_grads = torch.cat((prev_grads, torch.zeros_like(param.view(-1))), dim=0)
+		return prev_grads
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=1, gamma=2, reduction='mean'):

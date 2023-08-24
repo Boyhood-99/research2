@@ -57,7 +57,7 @@ class Dataset(object):
         num_clients = self.conf['f_uav_num']
         num_samples = len(self.train_dataset)
         print(num_samples)
-        np.random.seed(2023)
+        
         client_sample_nums  = [np.random.randint(800,1000) for i in range(num_clients)]
         # client_sample_nums  = [np.array(10000) for i in range(num_clients)]
         ######---------------------------------#客户端平分数据集
@@ -95,11 +95,11 @@ class Dataset(object):
         #                      seed=seed)       
         
         ###均衡IID
-        cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
-                                  num_clients,
-                                  balance=True,
-                                  partition="iid",
-                                  seed=seed)
+        # cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
+        #                           num_clients,
+        #                           balance=True,
+        #                           partition="iid",
+        #                           seed=seed)
         ###非均衡IID划分
         # cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
         #                             num_clients,
@@ -110,13 +110,13 @@ class Dataset(object):
         
         ####均衡dirichlet划分
         # print(self.train_dataset.targets[:100])
-        cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
-                                    num_clients,
-                                    balance=True,
-                                    partition="dirichlet",
-                                    dir_alpha=0.3,
-                                    verbose=False,
-                                    seed=seed)
+        # cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
+        #                             num_clients,
+        #                             balance=True,
+        #                             partition="dirichlet",
+        #                             dir_alpha=0.3,
+        #                             verbose=False,
+        #                             seed=seed)
         # print(self.train_dataset.targets[:100])
         ###非均衡dirichlet划分
         # cifar10part = CIFAR10Partitioner(self.train_dataset.targets,
@@ -135,8 +135,8 @@ class Dataset(object):
         #     dataset_indice_list.append(dataset_indice)
         #######---------------------------
         print(client_sample_nums)
-        client_dic = self.client_inner_dirichlet_partition(self.train_dataset.targets, num_clients=num_clients,num_classes=num_classes,
-                                                           dir_alpha=dir_alpha, client_sample_nums=client_sample_nums)
+        client_dic = self.client_inner_dirichlet_partition_v2(self.train_dataset.targets, num_clients=num_clients,num_classes=num_classes,
+                                                           dir_alpha=dir_alpha, client_sample_nums=client_sample_nums, seed=seed)
         
         # client_dic = self.iid(num_samples=num_samples, client_sample_nums=client_sample_nums)
         dataset_indice_list = [client_dic[i] for i in range(num_clients)]
@@ -149,9 +149,11 @@ class Dataset(object):
 
         return dataset_indice_list
 
+
+
     def client_inner_dirichlet_partition(self, targets, num_clients, num_classes, dir_alpha,
                                      client_sample_nums, verbose=False, seed=2023):
-        np.random.seed(seed)
+        # np.random.seed(seed)
         if not isinstance(targets, np.ndarray):
             targets = np.array(targets)
         if not isinstance(client_sample_nums, np.ndarray):
@@ -218,6 +220,53 @@ class Dataset(object):
         #             idx_list[curr_class][class_amount[curr_class]]
 
         #         break
+    
+    def client_inner_dirichlet_partition_v2(self, targets, num_clients, num_classes, dir_alpha,
+                                     client_sample_nums, verbose=False, seed=2023):
+        # np.random.seed(seed)
+        if not isinstance(targets, np.ndarray):
+            targets = np.array(targets)
+
+        # rand_perm = np.random.permutation(targets.shape[0])
+        # targets = targets[rand_perm]
+
+        class_priors = np.random.dirichlet(alpha=[dir_alpha] * num_classes,
+                                        size=num_clients)
+        prior_cumsum = np.cumsum(class_priors, axis=1)
+        idx_list = [np.where(targets == i)[0] for i in range(num_classes)]
+        class_amount = [len(idx_list[i]) for i in range(num_classes)]
+
+        client_indices = [np.zeros(client_sample_nums[cid]).astype(np.int64) for cid in
+                        range(num_clients)]
+        print('总样本数：', np.sum(client_sample_nums))
+        i = 0
+        j = 0
+        while np.sum(client_sample_nums) != 0:
+            i+=1
+            curr_cid = np.random.randint(num_clients)
+            # If current node is full resample a client
+            if verbose:
+                print('Remaining Data: %d' % np.sum(client_sample_nums))
+            if client_sample_nums[curr_cid] <= 0:
+                continue
+            client_sample_nums[curr_cid] -= 1
+            curr_prior = prior_cumsum[curr_cid]
+            while True:
+                curr_class = np.argmax(np.random.uniform() <= curr_prior)
+                # Redraw class label if no rest in current class samples
+                if class_amount[curr_class] <= 0:
+                    continue
+                class_amount[curr_class] -= 1
+                j+=1
+                client_indices[curr_cid][client_sample_nums[curr_cid]] = \
+                    idx_list[curr_class][class_amount[curr_class]]
+
+                break
+        print('循环取样个数，大于等于总样本数', i)
+        print('赋值个数，应该等于总样本数' , j)
+        client_dict = {cid: client_indices[cid] for cid in range(num_clients)}
+        return client_dict
+
     def iid(self, num_samples, client_sample_nums):
         rand_perm = np.random.permutation(num_samples)
         num_cumsum = np.cumsum(client_sample_nums).astype(int)
@@ -229,6 +278,8 @@ class Dataset(object):
                                 enumerate(np.split(rand_perm, num_cumsum)[:-1])]
         client_dict = dict(client_indices_pairs)
         return client_dict
+
+
 
 # labels = np.argmax(train_labels, axis=1)
 # # 对数据标签进行排序

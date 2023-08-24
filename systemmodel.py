@@ -9,7 +9,7 @@ np.seterr(divide='ignore', invalid='ignore')
 # f_uav_num=5
 # a=np.random.randint(800,1000,size=(f_uav_num,1))
 class SystemModel(object):
-    def __init__(self,f_uav_num=5):
+    def __init__(self, datasize, f_uav_num=5):
 
         self.f_uav_num = f_uav_num              # 底层无人机数，K
         self.f_uav_H = 140               # 无人机的飞行高度
@@ -49,13 +49,14 @@ class SystemModel(object):
         self.G_Li=np.zeros(shape=(self.f_uav_num,1))
 
 
-        self.S_w=28*1024  #下行传输数据量
-        self.S_w_=28*1024  #上行传输数据量
+        self.S_w=200*1024  #下行传输数据量
+        self.S_w_=200*1024  #上行传输数据量
 
         #计算参数
-        self.L =10000#800                   # 训练1sample需要的CPU计算周期数
+        self.L =100000                  # 训练1sample需要的CPU计算周期数
         self.f_uav_f = 1 * (10 ** 9)      # 无人机的计算频率
-        self.f_uav_data=np.random.randint(800,1000,size=(self.f_uav_num,1))
+        # self.f_uav_data=np.random.randint(800,1000,size=(self.f_uav_num,1))
+        self.f_uav_data=np.array(datasize).reshape(self.f_uav_num, 1)
         
 
         self.C_T=100
@@ -296,7 +297,7 @@ class SystemModel(object):
 
         return time_down
 
-    def t_comp(self,index, I):
+    def t_comp(self, index, I):
 
         t_comp = []
         self.I = I
@@ -461,7 +462,7 @@ class SystemModel1(SystemModel):
 #model based on location
 class SystemModel0(SystemModel):
 
-    def __init__(self,f_uav_num=5):
+    def __init__(self, f_uav_num=5):
         self.f_uav_num = f_uav_num
         super().__init__(f_uav_num=self.f_uav_num)
         
@@ -589,8 +590,8 @@ class SystemModel0(SystemModel):
         return super().p_fly(v)
 
 class  SystemModel2(SystemModel):
-    def __init__(self, ):
-        super().__init__()
+    def __init__(self, datasize, f_uav_num=5):
+        super().__init__(datasize, f_uav_num)
     def Distance(self, f_uav_location, l_uav_location):
         self.f_uav_location = f_uav_location
         self.l_uav_location = l_uav_location
@@ -603,10 +604,10 @@ class  SystemModel2(SystemModel):
         D= np.array(D).reshape(self.f_uav_num, 1)
         return D
 
-    def Phi(self,  f_uav_location, l_uav_location, d,):
+    def Phi(self,  f_uav_location, l_uav_location, d, ):
         
-        f_uav_location = f_uav_location
-        l_uav_location = l_uav_location
+        self.f_uav_location = f_uav_location
+        self.l_uav_location = l_uav_location
         
         d=d
         G=[]
@@ -633,13 +634,15 @@ class  SystemModel2(SystemModel):
             phi_y = phi[i][1]+alpha[1]
             phi_z = phi[i][2]+alpha[2]
 #----------------------------------------------------------------------------------------------
-            #to process zerodivision error
-            # g_x=(math.sin(self.A_x*math.pi/2*phi_x)/(self.A_x*math.sin(math.pi/2*phi_x)+0.00001))**2
-            # g_y=(math.sin(self.A_y*math.pi/2*phi_y)/(self.A_y*math.sin(math.pi/2*phi_y)+0.00001))**2
-            # g_z=(math.sin(self.A_z*math.pi/2*phi_z)/(self.A_z*math.sin(math.pi/2*phi_z)+0.00001))**2
-            g_x=(math.sin(self.A_x*math.pi/2*phi_x)/(self.A_x*math.sin(math.pi/2*phi_x)))**2
-            g_y=(math.sin(self.A_y*math.pi/2*phi_y)/(self.A_y*math.sin(math.pi/2*phi_y)))**2
-            g_z=(math.sin(self.A_z*math.pi/2*phi_z)/(self.A_z*math.sin(math.pi/2*phi_z)))**2
+#to process zerodivision error  for DDPG
+            g_x=(math.sin(self.A_x*math.pi/2*phi_x)/(self.A_x*math.sin(math.pi/2*phi_x)+0.00001))**2
+            g_y=(math.sin(self.A_y*math.pi/2*phi_y)/(self.A_y*math.sin(math.pi/2*phi_y)+0.00001))**2
+            g_z=(math.sin(self.A_z*math.pi/2*phi_z)/(self.A_z*math.sin(math.pi/2*phi_z)+0.00001))**2
+#####  for SAC
+            # g_x=(math.sin(self.A_x*math.pi/2*phi_x)/(self.A_x*math.sin(math.pi/2*phi_x)))**2
+            # g_y=(math.sin(self.A_y*math.pi/2*phi_y)/(self.A_y*math.sin(math.pi/2*phi_y)))**2
+            # g_z=(math.sin(self.A_z*math.pi/2*phi_z)/(self.A_z*math.sin(math.pi/2*phi_z)))**2
+
             # g_x=(math.sin(self.A_x*math.pi/2*phi_x)*math.pow((self.A_x*math.sin(math.pi/2*phi_x)), -1))**2
             # g_y=(math.sin(self.A_y*math.pi/2*phi_y)*math.pow((self.A_y*math.sin(math.pi/2*phi_y)), -1))**2
             # g_z=(math.sin(self.A_z*math.pi/2*phi_z)*math.pow((self.A_z*math.sin(math.pi/2*phi_z)), -1))**2
@@ -656,12 +659,14 @@ class  SystemModel2(SystemModel):
             if g  > 0.01:    
                 index.append(i)               
             G.append(g)
+
         if len(index) == 0:
             print(g_x, g_y, g_z)
             print(self.f_uav_location)
             print(self.l_uav_location)
             print(alpha)
             print(phi)
+            
         num_seletced = len(index)
         G = np.array(G).reshape(self.f_uav_num, 1)
         index = np.array(index).reshape(num_seletced, 1)

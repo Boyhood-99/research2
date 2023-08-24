@@ -26,8 +26,13 @@ class ConfigDraw:
 @dataclass
 class ConfigTrain:
     DEVICE=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    MAX_EPISODES=50
-    BATCHSIZE=256
+    MAX_EPISODES = 100
+    BATCHSIZE = 256 ##256
+
+
+    ###should larger than batchsize 
+    WARM_UP = 300
+    BUFFER_SIZE = 4000
     
 
     # model_name = "resnet50"

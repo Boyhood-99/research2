@@ -11,6 +11,7 @@ from configuration import ConfigDraw, ConfigTrain
 from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
 from visualization import flvisual, data_dis_visual
+import random
 writer = SummaryWriter('./tensorboard/log/')
 
 #global Epoch: 4, acc: 72.61999999999999, loss: 0.8394354427337647
@@ -22,14 +23,17 @@ def main(conf, dir_alpha = 0.3):
 	
 	date = datetime.datetime.now().strftime('%m-%d')
 	torch.manual_seed(2023)
+	np.random.seed(2023)
+	random.seed(2023)
+	
 
 	# parser = argparse.ArgumentParser(description='Federated Learning')
 	# parser.add_argument('-c', '--config', dest='conf')
 	# args = parser.parse_args()
 	
 	dataset = Dataset(conf, dir_alpha=dir_alpha)
-	eval_datasets = dataset.eval_dataset
-	server = Server(conf, eval_datasets, compile = conf['compile'])
+	eval_dataset = dataset.eval_dataset
+	server = Server(conf, eval_dataset, compile = conf['compile'])
 	
 	num_clients = conf['f_uav_num']
 	clients = []
@@ -60,10 +64,10 @@ def main(conf, dir_alpha = 0.3):
 		for i in conf['candidates']:
 			candidates.append(clients[i])	
 
-		local_epochs = np.random.randint(2, 11)	
-		print(local_epochs)
-		# local_epochs = conf['local_epochs']
+		local_epochs = random.randint(2, 11)	
 		
+		# local_epochs = conf['local_epochs']
+		print(local_epochs)
 		weight_accumulator = {}
 		for name, params in server.global_model.state_dict().items():
 			weight_accumulator[name] = torch.zeros_like(params)
@@ -84,11 +88,12 @@ def main(conf, dir_alpha = 0.3):
 		#---------------------------------------多线程
 		num_candidate = len(candidates)
 		threads = []
-		for i in range(num_candidate):
-			thread = TrainThread(candidates[i].local_train(server.global_model, global_epoch, 
-						  local_epochs=local_epochs, 
-						#   name='FedProx',
-			 				) )
+		for candidate in candidates:
+			assert isinstance(candidate, Client)
+			thread = TrainThread(candidate.local_train(server.global_model, global_epoch, 
+                                                           local_epochs, 
+														#   name='FedProx',
+															) )
 			# thread.setDaemon(True)
 			threads.append(thread)
 		# for thread in threads:
@@ -114,16 +119,16 @@ def main(conf, dir_alpha = 0.3):
 		server.model_aggregate(weight_accumulator)
 
 		#-------------------------------------
-		if global_epoch < 10 or global_epoch == conf["global_epochs"] - 1:
-			acc, loss = server.model_eval()#耗时
-			print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}')
+		# if global_epoch < 10 or global_epoch == conf["global_epochs"] - 1:
+		# 	acc, loss = server.model_eval()#耗时
+		# 	print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}')
 			
-		elif global_epoch >10 and global_epoch%10 == 0:
-			acc, loss = server.model_eval()#耗时
-			print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}')
+		# elif global_epoch >10 and global_epoch%10 == 0:
+		# 	acc, loss = server.model_eval()#耗时
+		# 	print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}')
 		#---------------------------------------
-		# acc, loss = server.model_eval()#耗时
-
+		acc, loss = server.model_eval()#耗时
+		print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}')
 		
 
 		# print(f'global Epoch: {global_epoch}, acc: {acc}, loss: {loss}')
@@ -136,8 +141,8 @@ def main(conf, dir_alpha = 0.3):
 	df = pd.DataFrame(df_list)
 	# df.to_csv(f'./log/log{date}.csv')
 	# date = datetime.datetime.now().strftime('%m-%d')
-	ts = time.time()
-	flvisual(df, ts, )
+	# ts = time.time()
+	# flvisual(df, ts, )
 	return df
 
 if __name__ == '__main__':
@@ -165,13 +170,18 @@ if __name__ == '__main__':
     conf["config_draw"] = config_draw
     
 
-    df1 = main(conf=conf, dir_alpha=0.3)
-    df2 = main(conf=conf, dir_alpha=1)
-    df3 = main(conf=conf, dir_alpha=10)
-    df_list = [(df1, 0.3), (df2, 1), (df3, 10)]
+    # df1 = main(conf=conf, dir_alpha=0.3)
+    # df2 = main(conf=conf, dir_alpha=0.6)
+    # df3 = main(conf=conf, dir_alpha=1)
+    df4 = main(conf=conf, dir_alpha=10)
+    df_list = [(df1, 0.3), 
+	       (df2, 0.6), 
+		   (df3, 1), 
+		   (df4, 10),
+		   ]
+    
     data_dis_visual(df_list=df_list)
         
-		
 		
 	
 		

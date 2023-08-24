@@ -17,6 +17,20 @@ class TrainThread(Thread):
         self.diff, self.loss_dic = self.func
     def getresult(self):
         return self.diff, self.loss_dic
+    
+class TrainThread_FedDyn(Thread):
+    def __init__(self, func,
+                #  args,
+                 ):
+        Thread.__init__(self)
+        self.func = func
+        # self.args = args
+        self.result = None
+    def run(self, ):
+        self.loss, self.prev_grads = self.func
+
+    def getresult(self):
+        return self.loss, self.prev_grads
 
 
 def get_memory_allocated(device, inplace = False):

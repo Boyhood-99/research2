@@ -14,7 +14,10 @@ from torch.distributions import Normal
 #results wo don't want, raise zerodivision or zero value problem
 class DDPG(object):
     def __init__(self, state_dim, action_dim,device,replay_buffer_size=NONE,replacement=NONE,
-        batch_size=256,lr_a=1e-4, lr_c=1e-4,net_target=NONE,tau=0.005,gamma=0.99,) :
+        batch_size=256, lr_a=1e-4, lr_c=1e-5,
+        net_target=NONE, tau=0.005, gamma=0.99,
+        ) :
+
         # super(DDPG, self).__init__()
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -40,8 +43,8 @@ class DDPG(object):
         # # 定义 Critic 网络
         # self.critic = Critic(state_dim,action_dim)
         # self.critic_target = Critic(state_dim,action_dim)
-        self.net=Net(self.state_dim,self.action_dim).cuda()
-        self.net_target=deepcopy(self.net).cuda() if net_target==NONE else net_target.cuda()
+        self.net = Net(self.state_dim,self.action_dim).cuda()
+        self.net_target = deepcopy(self.net).cuda() if net_target==NONE else net_target.cuda()
 
         # 定义优化器
         self.aopt = torch.optim.Adam(self.net.actor.parameters(), lr=self.lr_a)
@@ -104,7 +107,7 @@ class DDPG(object):
 
 class SAC(object,):
     def __init__(self,state_dim, action_dim,device,batch_size=256,replay_buffer_size=NONE,
-                soft_tau=0.005,soft_q_lr = 1e-5,policy_lr = 1e-4,gamma=0.99,policy_net=NONE,
+                soft_tau=0.005,soft_q_lr = 1e-5,policy_lr = 1e-4,gamma=0.99,actor=NONE,
                 hidden_dim=128,hidden_dim2=64,hidden_dim3=34,
                 #hidden_dim=256,hidden_dim2=128,hidden_dim3=128
                 ):#1e-2):
@@ -135,14 +138,14 @@ class SAC(object,):
         # self.value_net        = ValueNetwork(self.state_dim, self.hidden_dim).to(device)
         # self.target_value_net = ValueNetwork(self.state_dim, self.hidden_dim).to(device)
 
-        self.policy_net = PolicyNetwork(self.state_dim, self.action_dim, self.hidden_dim,self.hidden_dim2,self.hidden_dim3).to(device)\
-            if policy_net==NONE else policy_net.to(device)
+        self.actor = PolicyNetwork(self.state_dim, self.action_dim, self.hidden_dim,self.hidden_dim2,self.hidden_dim3).to(device)\
+            if actor==NONE else actor.to(device)
         
 
-        # self.soft_q_net = SoftQNetwork(self.state_dim, self.action_dim, self.hidden_dim).to(device)
-        self.soft_q_net = CriticTwin(self.state_dim, self.action_dim,self.hidden_dim,self.hidden_dim2, self.hidden_dim3).to(device)
+        # self.critic = SoftQNetwork(self.state_dim, self.action_dim, self.hidden_dim).to(device)
+        self.critic = CriticTwin(self.state_dim, self.action_dim,self.hidden_dim,self.hidden_dim2, self.hidden_dim3).to(device)
         
-        self.soft_q_net_target = deepcopy(self.soft_q_net).to(device)
+        self.critic_target = deepcopy(self.critic).to(device)
 
        
         #损失函数和优化器
@@ -152,8 +155,8 @@ class SAC(object,):
         self.soft_q_criterion = torch.nn.SmoothL1Loss(reduction="mean")
 
         # self.value_opt  = torch.optim.Adam(self.value_net.parameters(), lr=self.value_lr)
-        self.soft_q_opt = torch.optim.Adam(self.soft_q_net.parameters(), lr=self.soft_q_lr)
-        self.policy_opt = torch.optim.Adam(self.policy_net.parameters(), lr=self.policy_lr)
+        self.soft_q_opt = torch.optim.Adam(self.critic.parameters(), lr=self.soft_q_lr)
+        self.policy_opt = torch.optim.Adam(self.actor.parameters(), lr=self.policy_lr)
 
         
 
@@ -166,7 +169,7 @@ class SAC(object,):
         self.target_entropy = -self.action_dim
 
     def evaluate(self, state):
-        mean, log_std = self.policy_net(state)
+        mean, log_std = self.actor(state)
         std = log_std.exp()
        
         noise = torch.randn_like(mean, requires_grad=True)
@@ -187,7 +190,7 @@ class SAC(object,):
         state = state.astype(float)
         state = torch.FloatTensor(state).to(self.device)
        
-        mean, log_std = self.policy_net(state)
+        mean, log_std = self.actor(state)
         
         std = log_std.exp()
         
@@ -198,7 +201,7 @@ class SAC(object,):
         
     def test_choose_action(self,state):
         state = torch.FloatTensor(state).to(self.device)
-        mean, log_std = self.policy_net(state) 
+        mean, log_std = self.actor(state) 
         mean=mean.tanh()  
         return mean.detach().cpu().numpy()
 
@@ -219,11 +222,11 @@ class SAC(object,):
             mask = (1 - done) * self.gamma
 
             next_action, next_log_prob = self.evaluate(next_state)
-            next_q=self.soft_q_net_target.get_q_min(next_state,next_action)
+            next_q=self.critic_target.get_q_min(next_state,next_action)
 
             alpha = self.alpha_log.exp().detach()
             q_target = reward + mask* (next_q-alpha*next_log_prob)
-        q1,q2=self.soft_q_net.get_q1_q2(state,action)
+        q1,q2=self.critic.get_q1_q2(state,action)
         q_loss=(self.soft_q_criterion(q1,q_target)+self.soft_q_criterion(q2,q_target))/2
         return q_loss, state
 
@@ -239,7 +242,7 @@ class SAC(object,):
         self.soft_q_opt.step()
 
         #软更新
-        self.soft_update(self.soft_q_net_target,self.soft_q_net,self.soft_tau)
+        self.soft_update(self.critic_target,self.critic,self.soft_tau)
         
         #阿尔法更新
         action, log_prob = self.evaluate(state)
@@ -253,7 +256,7 @@ class SAC(object,):
         alpha = self.alpha_log.exp().detach()
         with torch.no_grad():
             self.alpha_log[:] = self.alpha_log.clamp(-20, 2)
-        q_value_pg = self.soft_q_net.get_q_min(state, action)
+        q_value_pg = self.critic.get_q_min(state, action)
         policy_loss = -(q_value_pg - log_prob * alpha).mean()
        
         
@@ -276,13 +279,13 @@ class SAC(object,):
 
         
         next_action, next_log_prob = self.evaluate(next_state)
-        next_q=self.soft_q_net_target.get_q_min(next_state,next_action)
+        next_q=self.critic_target.get_q_min(next_state,next_action)
         alpha = self.alpha_log.exp().detach()
         q_target = reward + (1 - done) * self.gamma * (next_q-next_log_prob)
         
         q_loss=(self.soft_q_criterion(q1,q_target)+self.soft_q_criterion(q2,q_target))/2
         
-        expected_q_value = self.soft_q_net(state, action)
+        expected_q_value = self.critic(state, action)
         expected_value   = self.value_net(state)
         # new_action, log_prob = self.evaluate(state)
         
@@ -293,7 +296,7 @@ class SAC(object,):
        
         # q_value_loss = self.soft_q_criterion(expected_q_value, next_q_value.detach())
 
-        expected_new_q_value = self.soft_q_net(state, new_action)
+        expected_new_q_value = self.critic(state, new_action)
         next_value = expected_new_q_value - self.alpha*log_prob
         # print(expected_value,next_value)
         value_loss = self.value_criterion(expected_value, next_value.detach())
@@ -535,6 +538,7 @@ class CriticTwin(nn.Module):
         # return self.net_q1(tmp), self.net_q2(tmp)  # two Q values
    
 
+###SAC 版本一网络
 #SAC Q网络,版本一  
 class SoftQNetwork(nn.Module):
     def __init__(self, state_dim, actions_dim, hidden_size, init_w=3e-3):

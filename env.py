@@ -1,16 +1,17 @@
 import math
 import numpy as np
+import time
 from systemmodel import SystemModel, SystemModel0, SystemModel1, SystemModel2
 from copy import deepcopy
-from fed_alg import FedAvg
-import datasets 
+from fed_alg import FedAvg, FedDyn
+from datasets import Dataset 
 
 
 #state space based on location
 #速度变化,范围变化,x_range = [-20, 2000], y_range = [-100, 100]
 class Environment(object):
     
-    def __init__(self, f_uav_num = 5, epsilon = 0.001, end_reward = 0, time_max = 80, x_range = [-20, 3000], y_range = [-200, 200]):
+    def __init__(self, f_uav_num = 5, epsilon = 0.001, end_reward = 0, time_max = 80, x_range = [-20, 2000], y_range = [-100, 100]):
         # np.random.seed(0)
         self.f_uav_num = f_uav_num             
         self.l_uav_num = 1
@@ -25,10 +26,10 @@ class Environment(object):
         #动作约束
         self.theta_min = -math.pi/2
         self.theta_max  = math.pi/2
-        self.v_min = 20
-        self.v_max = 30#20
         # self.v_min = 20
-        # self.v_max = 20
+        # self.v_max = 30#20
+        self.v_min = 5
+        self.v_max = 10#20
         
         self.x_range = x_range
         self.y_range = y_range
@@ -37,7 +38,7 @@ class Environment(object):
         # self.l_v_min = 10
         # self.l_v_max = 30
         self.l_v_min = 5
-        self.l_v_max = 40
+        self.l_v_max = 20
 
         #analog beamforming
         self.alpha_z_min = -1
@@ -70,9 +71,9 @@ class Environment(object):
 
         self.step_num = 0
         
-        self.systemmodel = SystemModel(f_uav_num = self.f_uav_num)
+        
         self.num_episode = 0
-        self.l_uav_location = np.zeros(2)
+        # self.l_uav_location = np.zeros(2)
         self.outofdistance = 0
 
         self.direction_flag_x = np.ones(self.f_uav_num)#方向控制
@@ -235,27 +236,31 @@ class Environment(object):
         reward = reward1 + reward2
         
         return self.state, reward, done, np.max(t_up_ + t_down_), np.max(t_comp + t_up_ + t_down_), l, f, d
-    
+
+#state space based on location
 class Environment2(Environment):
     def __init__(self, conf):
         super().__init__()
         self.conf = conf
-        self.train_datasets, self.eval_datasets = datasets.get_dataset("./data/", conf["type"])
-        self.fl = FedAvg(conf = self.conf, train_datasets = self.train_datasets, eval_datasets = self.eval_datasets)
-        self.systemmodel = SystemModel2()
-        self.df_list = []
-    def reset(self):
+        # self.dataset = Dataset(self.conf)
+        self.fl = FedAvg(conf = self.conf, dir_alpha=0.3)
+        # self.fl = FedDyn(conf = self.conf, dir_alpha=0.3)
+        datasize = self.fl.get_datasize()
+        self.systemmodel = SystemModel2(datasize, f_uav_num=self.f_uav_num,
+                                        )
         
+    def reset(self):
+        self.df_list = []
         self.step_num = 0
         global_epoch_dic = self.fl.reset()
         self.df_list.append(global_epoch_dic)
         
-        
         #随机初始化底层无人机位置，范围{0，1000}
-        # self.f_uav_location = np.random.uniform(0, 20, size = (self.f_uav_num, 3))
-        self.f_uav_location = np.zeros((self.f_uav_num, 3))
+        np.random.seed(1)
+        self.f_uav_location = np.random.uniform(0, 50, size = (self.f_uav_num, 3))
+        # self.f_uav_location = np.zeros((self.f_uav_num, 3))
         for i in range(self.f_uav_num):
-            self.f_uav_location[i][2] = self.f_uav_H
+            self.f_uav_location[i, 2] = self.f_uav_H
         #随机初始化顶层无人机位置
         self.l_uav_location = np.zeros(3)
         self.l_uav_location[2] = self.l_uav_H
@@ -272,7 +277,9 @@ class Environment2(Environment):
 
         self.local_accuracy_sum = np.zeros(1)
         self.time_total = 0
-        self.state = np.hstack((self.f_uav_location.reshape(self.f_uav_num*3, ),init_phi.reshape(self.f_uav_num*3, ) , self.l_uav_location, self.time_total, self.local_accuracy_sum, ))
+        self.state = np.hstack((self.f_uav_location.reshape(self.f_uav_num*3, ),init_phi.reshape(self.f_uav_num*3, ) , self.l_uav_location, 
+                                # self.time_total, self.local_accuracy_sum, 
+                                ))
 
         return self.state
 
@@ -289,8 +296,9 @@ class Environment2(Environment):
         l_uav_location = state[self.f_uav_num*6:self.f_uav_num*6 + 3]
         
      
-        time_total = state[self.f_uav_num*6 + 3:self.f_uav_num*6 + 4]
-        local_accuracy_sum = state[self.f_uav_num*6 + 4:self.f_uav_num*6 + 5]
+        # time_total = state[self.f_uav_num*6 + 3:self.f_uav_num*6 + 4]
+        # local_accuracy_sum = state[self.f_uav_num*6 + 4:self.f_uav_num*6 + 5]
+        time_total = self.time_total
         
       
         action = action
@@ -301,14 +309,17 @@ class Environment2(Environment):
         # action[3:6] = action[3:6]
         action[5] = (self.alpha_z_max-self.alpha_z_min)/2*action[5] + (self.alpha_z_max + self.alpha_z_min)/2 
         alpha = action[3:6]
-        auto_lr = (self.auto_lr_max-self.auto_lr_min)/2*action[6] + (self.auto_lr_max + self.auto_lr_min)/2
-        #####
+
+        # auto_lr = (self.auto_lr_max-self.auto_lr_min)/2*action[6] + (self.auto_lr_max + self.auto_lr_min)/2
+        ##########
+        time_begin = time.time()
         local_epochs = int(action[2])
-        global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, local_epochs, auto_lr)
-
+        self.step_num += 1
+        global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, local_epochs, )
+        
         self.df_list.append(global_epoch_dic)
-
-        #####
+        self.fl_time = time.time() - time_begin
+        #########
        
         distance = self.systemmodel.Distance(f_uav_location, l_uav_location) 
         
@@ -331,7 +342,7 @@ class Environment2(Environment):
         #此处无人机飞行时间为当前状态下，底层无人机计算时间(与本次决策相关)和上下行传输时间(只与当前位置有关)
         fly_time = np.max(t_comp + t_down_ + t_up_) #+ t_agg
         next_time_total = time_total + fly_time
-        self.time_total = next_time_total
+        self.time_total = deepcopy(next_time_total)
 
         #根据action，环境进行下一步,   
         #底层无人机速度和方向是随机的
@@ -370,36 +381,41 @@ class Environment2(Environment):
             l_uav_location[1], self.y_range[1]), self.y_range[0])
         
         next_l_uav_location = np.array(l_uav_location)
-        self.l_uav_location = deepcopy(l_uav_location)
+        self.l_uav_location = deepcopy(next_l_uav_location)
 
-        next_distance = self.systemmodel.Distance(f_uav_location=f_uav_location, l_uav_location=l_uav_location)
-        next_phi = self.systemmodel.Phi(f_uav_location=f_uav_location, l_uav_location=l_uav_location, d=next_distance)
+        next_distance = self.systemmodel.Distance(f_uav_location=next_f_uav_location, l_uav_location=next_l_uav_location)
+        next_phi = self.systemmodel.Phi(f_uav_location=next_f_uav_location, l_uav_location=next_l_uav_location, d=next_distance)
 
         #局部精度公式求和
-        yita = math.exp(-action[2]*(2-self.L*self.lamda)*self.lamda*self.gamma/2)
-        local_accuracy = math.log(1-((1-yita)*self.gamma**2*self.ksi)/(2*self.L**2))
-        self.local_accuracy_sum = local_accuracy_sum + local_accuracy
+        # yita = math.exp(-action[2]*(2-self.L*self.lamda)*self.lamda*self.gamma/2)
+        # local_accuracy = math.log(1-((1-yita)*self.gamma**2*self.ksi)/(2*self.L**2))
+        # self.local_accuracy_sum = local_accuracy_sum + local_accuracy
         
+
         #判断该观察状态下，本次episode是否结束
-        self.step_num += 1
-        done = 1 if self.step_num > 50 - 1 else 0  #30
+        
+        done = 1 if self.step_num > self.conf["global_epochs"] - 1 else 0  #30
         done = np.array(done)
         
         #环境状态改变, 下一个state
-        next_state = np.hstack((next_f_uav_location.reshape(self.f_uav_num*3, ), next_phi.reshape(self.f_uav_num*3, ), next_l_uav_location.reshape(3, ), self.time_total, self.local_accuracy_sum))
+        next_state = np.hstack((next_f_uav_location.reshape(self.f_uav_num*3, ), next_phi.reshape(self.f_uav_num*3, ), next_l_uav_location.reshape(3, ),
+                                #  self.time_total, self.local_accuracy_sum,
+                                 ))
         
         self.state = next_state.astype(float)
         #奖励函数求解
     
         # reward1 = np.min(gain)
         reward_settle = 0
-        energy_consum = np.array(( - fly_time) * self.systemmodel.p_fly(action[0])/ 1000) 
+        energy_consum = np.array(( fly_time) * self.systemmodel.p_fly(action[0])) 
+        
         acc_increase = diff_acc
         acc_increase = 0
         loss_decrease = -diff_loss 
-        loss_decrease = 0
+        # loss_decrease = 0
+
         reward5 = - avg_local_loss
-        # reward5 = 0
+        reward5 = 0
 
 
         #结算奖励
@@ -413,12 +429,20 @@ class Environment2(Environment):
         l = deepcopy(self.l_uav_location)
         f = deepcopy(next_f_uav_location)
         d = deepcopy(np.max(distance))
-        reward = reward_settle + energy_consum + acc_increase + loss_decrease + reward5
         
+        reward = reward_settle + (- energy_consum*0.001) + acc_increase + loss_decrease + reward5
+
+        print('energy:', energy_consum )
+        print('loss_decrease:', loss_decrease)
+        # print('acc_increase', acc_increase)
+
         return self.state, reward, energy_consum, acc_increase, loss_decrease, done, \
             l, f, d, np.max(t_up_ + t_down_), np.max(t_comp + t_up_ + t_down_)
+    
     def get_dflist(self, ):
         return self.df_list
+    def get_fl_time(self, ):
+        return self.fl_time
 
 #state space based on distance
 class Environment1(Environment):
