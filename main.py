@@ -5,7 +5,7 @@ import datetime
 from uav import *
 from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
-from visualization import rlvisual, flvisual
+from visualization import rlvisual_prev, flvisual
 from configuration import ConfigDraw, ConfigTrain
 from agent import AgentSAC, AgentDDPG
 import matplotlib.pyplot as plt
@@ -44,7 +44,7 @@ def train(conf, rl, dir):
                 rl.save_model()
             rl.update(update_times = 200)
             return_ls.append(ep_reward)
-            ene_consum_ls.append(energy_consum)
+            ene_consum_ls.append(energy_consum/1000)
             print('\n')
 
 
@@ -67,29 +67,34 @@ def train(conf, rl, dir):
 
 
     
-def visu_rl(df_fl_SAC = None, df_fl_DDPG = None, return_ls_SAC = None, return_ls_DDPG = None, 
+def rlvisual(df_fl_SAC = None, df_fl_DDPG = None, return_ls_SAC = None, return_ls_DDPG = None, 
             ene_consum_ls_SAC = None, ene_consum_ls_DDPG = None, 
             ):
     df_fl_SAC  = df_fl_SAC   if df_fl_SAC  is not None else pd.read_csv('./SAC/acc_loss.csv')
-    df_fl_DDPG = df_fl_DDPG  if df_fl_DDPG is not None else pd.read_csv('./SAC/acc_loss.csv')
+    df_fl_DDPG = df_fl_DDPG  if df_fl_DDPG is not None else pd.read_csv('./DDPG/acc_loss.csv')
 
 
 
 #####     可视化FL
     date = datetime.datetime.now().strftime('%m-%d')
-    df = pd.concat([df_fl_SAC, df_fl_DDPG], axis=1,)
+    df = pd.concat([df_fl_SAC[['global_accuracy', 'global_loss']], df_fl_DDPG[['global_accuracy', 'global_loss']]], axis=1,)
     df.to_csv(f'fl.csv')
-    df.columns = ['SAC', 'SAC_acc', 'SAC_loss', 'DDPG', 'DDPG_acc', 'DDPG_loss']
+    df.columns =  ['SAC_acc', 'SAC_loss',  'DDPG_acc', 'DDPG_loss']
+    # ['SAC', 'SAC_acc', 'SAC_loss', 'DDPG', 'DDPG_acc', 'DDPG_loss']
     flvisual(df, date)
 
 ######   return和energy 可视化
     return_ene_SAC =  pd.read_csv('./SAC/return_ene.csv')
     return_ene_DDPG = pd.read_csv('./DDPG/return_ene.csv')
+
     return_ls_SAC   = return_ls_SAC   if return_ls_SAC   is not None else return_ene_SAC['return']
     return_ls_DDPG = return_ls_DDPG   if return_ls_DDPG  is not None else return_ene_DDPG['return']
 
     ene_consum_ls_SAC   = ene_consum_ls_SAC   if ene_consum_ls_SAC   is not None else return_ene_SAC['energy']
     ene_consum_ls_DDPG  = ene_consum_ls_DDPG  if ene_consum_ls_DDPG  is not None else return_ene_DDPG['energy']
+
+    # ene_consum_ls_SAC[:-2] =[i/1000 for i in ene_consum_ls_SAC[:-2]]
+    # ene_consum_ls_DDPG[:-2] =[i/1000 for i in ene_consum_ls_DDPG[:-2]]
 
     fig1, ax1 = plt.subplots()
 
@@ -138,16 +143,16 @@ if __name__ == '__main__':
     conf["config_draw"] = config_draw 
 
     # return_ls_SAC, ene_consum_ls_SAC, df_fl_SAC = train(conf, AgentSAC(conf, dir='SAC/'), dir='SAC/')
-    return_ls_DDPG, ene_consum_ls_DDPG, df_fl_DDPG = train(conf, AgentDDPG(conf, dir='DDPG/'), dir='DDPG/')
+    # return_ls_DDPG, ene_consum_ls_DDPG, df_fl_DDPG = train(conf, AgentDDPG(conf, dir='DDPG/'), dir='DDPG/')
 
     if True:
-        visu_rl(
+        rlvisual(
                 # df_fl_SAC =df_fl_SAC, 
-                df_fl_DDPG = df_fl_DDPG, 
-                # return_ls_SAC = return_ls_SAC, 
-                return_ls_DDPG = return_ls_DDPG, 
                 # ene_consum_ls_SAC = ene_consum_ls_SAC, 
-                ene_consum_ls_DDPG = ene_consum_ls_DDPG, 
+                # return_ls_SAC = return_ls_SAC, 
+                # df_fl_DDPG = df_fl_DDPG, 
+                # return_ls_DDPG = return_ls_DDPG, 
+                # ene_consum_ls_DDPG = ene_consum_ls_DDPG, 
                 )   
 
         

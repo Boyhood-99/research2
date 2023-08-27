@@ -112,6 +112,8 @@ def flvisual(df, date, diretory = f'./FL/'):
 
     plt.legend([axis1, axis2, axis3, axis4], ['test accuracy with proposed', 'test accuracy with DDPG',
                                                'test loss with proposed', 'test loss with DDPG'])
+    
+    
     fig1.savefig(os.path.join(diretory, f'{date}.png'))
     fig1.savefig(os.path.join(diretory, f'{date}.pdf'))
     fig1.savefig(os.path.join(diretory, f'{date}.eps'))

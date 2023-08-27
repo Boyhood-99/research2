@@ -1,6 +1,6 @@
 from torchvision import datasets, transforms
 from fedlab.utils.dataset.partition import CIFAR10Partitioner
-from fedlab.utils.functional import partition_report, save_dict
+from fedlab.utils.functional import partition_report #save_dict
 import numpy as np
 #in-place 操作可能会覆盖计算梯度所需的值。
 

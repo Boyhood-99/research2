@@ -11,7 +11,10 @@ from datasets import Dataset
 #速度变化,范围变化,x_range = [-20, 2000], y_range = [-100, 100]
 class Environment(object):
     
-    def __init__(self, f_uav_num = 5, epsilon = 0.001, end_reward = 0, time_max = 80, x_range = [-20, 2000], y_range = [-100, 100]):
+    def __init__(self, f_uav_num = 5, epsilon = 0.001, end_reward = 0, time_max = 80, 
+                #  x_range = [-20, 2000], y_range = [-100, 100],
+                 x_range = [-20, 4000], y_range = [-500, 500],
+                 ):
         # np.random.seed(0)
         self.f_uav_num = f_uav_num             
         self.l_uav_num = 1
@@ -24,21 +27,20 @@ class Environment(object):
         self.time_penalty = 0
        
         #动作约束
-        self.theta_min = -math.pi/2
+        self.theta_min  = -math.pi/2
         self.theta_max  = math.pi/2
-        # self.v_min = 20
-        # self.v_max = 30#20
-        self.v_min = 5
-        self.v_max = 10#20
+        self.v_min = 20
+        self.v_max = 30#20
+        # self.v_min = 5
+        # self.v_max = 10#20
         
         self.x_range = x_range
         self.y_range = y_range
-
         
-        # self.l_v_min = 10
-        # self.l_v_max = 30
         self.l_v_min = 5
-        self.l_v_max = 20
+        self.l_v_max = 40
+        # self.l_v_min = 5
+        # self.l_v_max = 20
 
         #analog beamforming
         self.alpha_z_min = -1

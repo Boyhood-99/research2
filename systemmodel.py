@@ -51,9 +51,11 @@ class SystemModel(object):
 
         self.S_w=200*1024  #下行传输数据量
         self.S_w_=200*1024  #上行传输数据量
+        self.S_w=2*1024*1024  #下行传输数据量
+        self.S_w_=2*1024*1024  #上行传输数据量
 
         #计算参数
-        self.L =100000                  # 训练1sample需要的CPU计算周期数
+        self.L =1000000                  # 训练1sample需要的CPU计算周期数
         self.f_uav_f = 1 * (10 ** 9)      # 无人机的计算频率
         # self.f_uav_data=np.random.randint(800,1000,size=(self.f_uav_num,1))
         self.f_uav_data=np.array(datasize).reshape(self.f_uav_num, 1)
