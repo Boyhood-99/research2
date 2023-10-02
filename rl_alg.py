@@ -13,9 +13,9 @@ from torch.distributions import Normal
 # DDPG algrithm easily converge to the action edge, cause some 
 #results wo don't want, raise zerodivision or zero value problem
 class DDPG(object):
-    def __init__(self, state_dim, action_dim,device,replay_buffer_size=NONE,replacement=NONE,
-        batch_size=256, lr_a=1e-4, lr_c=1e-5,
-        net_target=NONE, tau=0.005, gamma=0.99,
+    def __init__(self, state_dim, action_dim,device,replay_buffer_size = NONE,replacement = NONE,
+        batch_size = 256, lr_a = 1e-4, lr_c = 1e-5,
+        net_target = NONE, tau = 0.005, gamma = 0.99,
         ) :
 
         # super(DDPG, self).__init__()
@@ -23,8 +23,8 @@ class DDPG(object):
         self.action_dim = action_dim
         self.hard_replacement_counter = 0
         
-        self.device=device
-        self.replacement=replacement
+        self.device = device
+        self.replacement = replacement
         self.replay_buffer_size = replay_buffer_size
         self.replay_buffer = ReplayBuffer(self.replay_buffer_size)
         
@@ -32,7 +32,7 @@ class DDPG(object):
         self.lr_a = lr_a
         self.lr_c = lr_c
         self.batch_size = batch_size
-        self.tau=tau
+        self.tau = tau
 
         # 记忆库
         # self.experiencepool = ExperiencePool(memory_capacity)
@@ -44,17 +44,17 @@ class DDPG(object):
         # self.critic = Critic(state_dim,action_dim)
         # self.critic_target = Critic(state_dim,action_dim)
         self.net = Net(self.state_dim,self.action_dim).cuda()
-        self.net_target = deepcopy(self.net).cuda() if net_target==NONE else net_target.cuda()
+        self.net_target = deepcopy(self.net).cuda() if net_target == NONE else net_target.cuda()
 
         # 定义优化器
-        self.aopt = torch.optim.Adam(self.net.actor.parameters(), lr=self.lr_a)
-        self.copt = torch.optim.Adam(self.net.critic.parameters(), lr=self.lr_c)
+        self.aopt = torch.optim.Adam(self.net.actor.parameters(), lr = self.lr_a)
+        self.copt = torch.optim.Adam(self.net.critic.parameters(), lr = self.lr_c)
 
         # 选取损失函数
         self.mse_loss = nn.MSELoss()
 
     def choose_action(self, s):
-        # s=np.reshape(s,(1,8*10))
+        # s = np.reshape(s,(1,8*10))
         s = torch.FloatTensor(s).cuda('cuda:0')
         action = self.net.actor(s)     
         return action.cpu().detach().numpy()
@@ -84,7 +84,7 @@ class DDPG(object):
         a_loss = -torch.mean(q)
        
         self.aopt.zero_grad()
-        a_loss.backward(retain_graph=True)
+        a_loss.backward(retain_graph = True)
         self.aopt.step()
         
         # 训练critic
@@ -98,7 +98,7 @@ class DDPG(object):
         
        
         self.copt.zero_grad()
-        td_error.backward(retain_graph=True)
+        td_error.backward(retain_graph = True)
         self.copt.step()
         
 
@@ -106,31 +106,31 @@ class DDPG(object):
         return a_loss,td_error
 
 class SAC(object,):
-    def __init__(self,state_dim, action_dim,device,batch_size=256,replay_buffer_size=NONE,
-                soft_tau=0.005,soft_q_lr = 1e-5,policy_lr = 1e-4,gamma=0.99,actor=NONE,
-                hidden_dim=128,hidden_dim2=64,hidden_dim3=34,
-                #hidden_dim=256,hidden_dim2=128,hidden_dim3=128
+    def __init__(self,state_dim, action_dim,device,batch_size = 256,replay_buffer_size = NONE,
+                soft_tau = 0.005,soft_q_lr = 1e-5,policy_lr = 1e-4,gamma = 0.99,actor = NONE,
+                hidden_dim = 128,hidden_dim2 = 64,hidden_dim3 = 34,
+                #hidden_dim = 256,hidden_dim2 = 128,hidden_dim3 = 128
                 ):#1e-2):
 #增加节点数有时候可以使网络训练更快
         self.action_dim = action_dim
         self.state_dim  = state_dim
 
-        self.batch_size=batch_size
+        self.batch_size = batch_size
         self.replay_buffer_size = replay_buffer_size
         self.replay_buffer = ReplayBuffer(self.replay_buffer_size)
         
         
-        self.device=device
-        self.hidden_dim=hidden_dim
-        self.hidden_dim2=hidden_dim2
-        self.hidden_dim3=hidden_dim3
+        self.device = device
+        self.hidden_dim = hidden_dim
+        self.hidden_dim2 = hidden_dim2
+        self.hidden_dim3 = hidden_dim3
         
 
-        # self.value_lr  =value_lr
+        # self.value_lr   = value_lr
         self.soft_q_lr = soft_q_lr
         self.policy_lr = policy_lr
-        self.gamma=gamma
-        self.soft_tau=soft_tau
+        self.gamma = gamma
+        self.soft_tau = soft_tau
       
         
         #网络搭建
@@ -139,7 +139,7 @@ class SAC(object,):
         # self.target_value_net = ValueNetwork(self.state_dim, self.hidden_dim).to(device)
 
         self.actor = PolicyNetwork(self.state_dim, self.action_dim, self.hidden_dim,self.hidden_dim2,self.hidden_dim3).to(device)\
-            if actor==NONE else actor.to(device)
+            if actor == NONE else actor.to(device)
         
 
         # self.critic = SoftQNetwork(self.state_dim, self.action_dim, self.hidden_dim).to(device)
@@ -151,12 +151,12 @@ class SAC(object,):
         #损失函数和优化器
         # self.value_criterion  = nn.MSELoss()
         # self.soft_q_criterion = nn.MSELoss()
-        self.value_criterion = torch.nn.SmoothL1Loss(reduction="mean")
-        self.soft_q_criterion = torch.nn.SmoothL1Loss(reduction="mean")
+        self.value_criterion = torch.nn.SmoothL1Loss(reduction = "mean")
+        self.soft_q_criterion = torch.nn.SmoothL1Loss(reduction = "mean")
 
-        # self.value_opt  = torch.optim.Adam(self.value_net.parameters(), lr=self.value_lr)
-        self.soft_q_opt = torch.optim.Adam(self.critic.parameters(), lr=self.soft_q_lr)
-        self.policy_opt = torch.optim.Adam(self.actor.parameters(), lr=self.policy_lr)
+        # self.value_opt  = torch.optim.Adam(self.value_net.parameters(), lr = self.value_lr)
+        self.soft_q_opt = torch.optim.Adam(self.critic.parameters(), lr = self.soft_q_lr)
+        self.policy_opt = torch.optim.Adam(self.actor.parameters(), lr = self.policy_lr)
 
         
 
@@ -164,27 +164,27 @@ class SAC(object,):
         self.soft_plus = nn.Softplus()
 #1e-7
         self.alpha_log = torch.tensor(
-            (np.log(0),), dtype=torch.float32, requires_grad=True, device=self.device)  # trainable parameter
-        self.alpha_optim = torch.optim.Adam((self.alpha_log,), lr=0.00001)#0.0001)
+            (np.log(0),), dtype = torch.float32, requires_grad = True, device = self.device)  # trainable parameter
+        self.alpha_optim = torch.optim.Adam((self.alpha_log,), lr = 0.00001)#0.0001)
         self.target_entropy = -self.action_dim
 
     def evaluate(self, state):
         mean, log_std = self.actor(state)
         std = log_std.exp()
        
-        noise = torch.randn_like(mean, requires_grad=True)
+        noise = torch.randn_like(mean, requires_grad = True)
         a_noise = mean + std * noise
         
         # action = torch.tanh(mean+ std*z.to(self.device))
         # log_prob = log_std + self.log_sqrt_2pi + noise.pow(2).__mul__(0.5)
         log_prob = Normal(mean, std).log_prob(a_noise)
         # log_prob = log_prob + (-a_noise.pow(2) + 1.000001).log()
-        log_prob += (np.log(2.0) - a_noise - self.soft_plus(-2.0 * a_noise)) * 2
+        log_prob +=  (np.log(2.0) - a_noise - self.soft_plus(-2.0 * a_noise)) * 2
         
-         # log_prob = torch.mean(Normal(mean, std).log_prob(mean+ std*z.to(self.device)) - torch.log(1 - action.pow(2) + epsilon),dim=1,keepdim=True)
+         # log_prob = torch.mean(Normal(mean, std).log_prob(mean+ std*z.to(self.device)) - torch.log(1 - action.pow(2) + epsilon),dim = 1,keepdim = True)
        
         
-        return  a_noise.tanh(), log_prob.sum(1, keepdim=True)
+        return  a_noise.tanh(), log_prob.sum(1, keepdim = True)
         
     def choose_action(self, state):
         state = state.astype(float)
@@ -194,7 +194,7 @@ class SAC(object,):
         
         std = log_std.exp()
         
-        action=torch.normal(mean, std).tanh()
+        action = torch.normal(mean, std).tanh()
         action  = action.detach().cpu().numpy()
 
         return action
@@ -202,7 +202,7 @@ class SAC(object,):
     def test_choose_action(self,state):
         state = torch.FloatTensor(state).to(self.device)
         mean, log_std = self.actor(state) 
-        mean=mean.tanh()  
+        mean = mean.tanh()  
         return mean.detach().cpu().numpy()
 
     def soft_update(self,target_net, current_net, tau):
@@ -222,12 +222,12 @@ class SAC(object,):
             mask = (1 - done) * self.gamma
 
             next_action, next_log_prob = self.evaluate(next_state)
-            next_q=self.critic_target.get_q_min(next_state,next_action)
+            next_q = self.critic_target.get_q_min(next_state,next_action)
 
             alpha = self.alpha_log.exp().detach()
             q_target = reward + mask* (next_q-alpha*next_log_prob)
-        q1,q2=self.critic.get_q1_q2(state,action)
-        q_loss=(self.soft_q_criterion(q1,q_target)+self.soft_q_criterion(q2,q_target))/2
+        q1,q2 = self.critic.get_q1_q2(state,action)
+        q_loss = (self.soft_q_criterion(q1,q_target)+self.soft_q_criterion(q2,q_target))/2
         return q_loss, state
 
 
@@ -235,7 +235,7 @@ class SAC(object,):
         q_loss = torch.zeros(1)
         policy_loss = torch.zeros(1)
         #Q网络更新
-        q_loss, state=self.get_q_loss()
+        q_loss, state = self.get_q_loss()
 
         self.soft_q_opt.zero_grad()
         q_loss.backward()
@@ -279,11 +279,11 @@ class SAC(object,):
 
         
         next_action, next_log_prob = self.evaluate(next_state)
-        next_q=self.critic_target.get_q_min(next_state,next_action)
+        next_q = self.critic_target.get_q_min(next_state,next_action)
         alpha = self.alpha_log.exp().detach()
         q_target = reward + (1 - done) * self.gamma * (next_q-next_log_prob)
         
-        q_loss=(self.soft_q_criterion(q1,q_target)+self.soft_q_criterion(q2,q_target))/2
+        q_loss = (self.soft_q_criterion(q1,q_target)+self.soft_q_criterion(q2,q_target))/2
         
         expected_q_value = self.critic(state, action)
         expected_value   = self.value_net(state)

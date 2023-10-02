@@ -2,12 +2,8 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
-np.seterr(divide='ignore', invalid='ignore')
+# np.seterr(divide='ignore', invalid='ignore')
 
-# np.random.seed(1)
-#if dataset Dk is fixed or not
-# f_uav_num=5
-# a=np.random.randint(800,1000,size=(f_uav_num,1))
 class SystemModel(object):
     def __init__(self, datasize, f_uav_num = 5):
 
@@ -178,8 +174,6 @@ class SystemModel(object):
         index = np.array(index).reshape(num_seletced, 1)
 
         return G, index, 
-
-
 
     def ofdma_t_up(self, index, D, G):
         
@@ -434,9 +428,6 @@ class SystemModel2(SystemModel):
     def p_fly(self,v):                                                        
         return super().p_fly(v)
     
-
-
-
 
 
 

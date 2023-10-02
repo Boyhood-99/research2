@@ -7,10 +7,10 @@ import torch.nn as nn
 class Net(nn.Module):
     def __init__(self,state_dim,action_dim) :
         super(Net,self).__init__()
-        self.state_dim=state_dim
-        self.action_dim=action_dim
-        self.actor=Actor(self.state_dim,self.action_dim)
-        self.critic=Critic(self.state_dim,self.action_dim)
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.actor = Actor(self.state_dim,self.action_dim)
+        self.critic = Critic(self.state_dim,self.action_dim)
   
 '''class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, action_bound):
@@ -36,17 +36,17 @@ class Net(nn.Module):
         scaled_a = a * self.action_bound
         return scaled_a'''
 class Actor(nn.Module):
-    def __init__(self, state_dim, action_dim,init_w=3e-3):
+    def __init__(self, state_dim, action_dim,init_w = 3e-3):
         super(Actor,self).__init__()
       
-        self.hidsize=256
-        self.hidsize1=128
-        # self.hidsize2=8
+        self.hidsize = 256
+        self.hidsize1 = 128
+        # self.hidsize2 = 8
         # 神经网络层layer
         self.layer1 = nn.Linear(state_dim, self.hidsize)
        
-        self.layer2=nn.Linear(self.hidsize,self.hidsize1)
-        # self.layer3=nn.Linear(self.hidsize1,self.hidsize2)
+        self.layer2 = nn.Linear(self.hidsize,self.hidsize1)
+        # self.layer3 = nn.Linear(self.hidsize1,self.hidsize2)
         #输出层
         self.output = nn.Linear(self.hidsize1, action_dim)
         self.output.weight.data.uniform_(-init_w, init_w)
@@ -59,19 +59,19 @@ class Actor(nn.Module):
     def forward(self, s):
         #relu激活
         a = F.relu(self.layer1(s))
-        a=F.relu(self.layer2(a))
-        # a=F.relu(self.layer3(a))
+        a = F.relu(self.layer2(a))
+        # a = F.relu(self.layer3(a))
         a = torch.tanh(self.output(a))
         #恢复action
        
         return a
 
 class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim,init_w=3e-3):
+    def __init__(self, state_dim, action_dim,init_w = 3e-3):
         super(Critic,self).__init__()
-        self.hidsize =256
-        self.hidsize1=128
-        # self.hidsize2=8
+        self.hidsize  = 256
+        self.hidsize1 = 128
+        # self.hidsize2 = 8
         # 状态维度层
         self.layer1 = nn.Linear(state_dim+action_dim, self.hidsize)
         self.layer2 = nn.Linear(self.hidsize, self.hidsize1)
@@ -96,20 +96,20 @@ class Critic(nn.Module):
 
 #SAC Actor-network 
 class PolicyNetwork(nn.Module):
-    def __init__(self, state_dim, actions_dim, hidden_size,hidden_size2, hidden_size3, init_w=3e-3, log_std_min=-20, log_std_max=2):
+    def __init__(self, state_dim, actions_dim, hidden_size,hidden_size2, hidden_size3, init_w = 3e-3, log_std_min = -20, log_std_max = 2):
         super(PolicyNetwork, self).__init__()
         
         self.log_std_min = log_std_min
         self.log_std_max = log_std_max
 
-        self.hidden_size=hidden_size
-        self.hidden_size2=hidden_size2
-        # self.hidden_size3=hidden_size3
+        self.hidden_size = hidden_size
+        self.hidden_size2 = hidden_size2
+        # self.hidden_size3 = hidden_size3
         
         
         self.linear1 = nn.Linear(state_dim, self.hidden_size)
         self.linear2 = nn.Linear(self.hidden_size, self.hidden_size2)
-        # self.linear3=nn.Linear(self.hidden_size2,self.hidden_size3)
+        # self.linear3 = nn.Linear(self.hidden_size2,self.hidden_size3)
         
         #均值输出层
         self.mean_linear = nn.Linear(self.hidden_size2, actions_dim)
@@ -148,28 +148,28 @@ class CriticTwin(nn.Module):
             nn.Linear(hidden_size, hidden_size3), nn.ReLU(), nn.Linear(hidden_size3, 1))  # q2 value'''
 
     # no shared parameter
-    def __init__(self,  state_dim, action_dim,hidden_size,hidden_size2,hidden_size3,init_w=3e-3):
+    def __init__(self,  state_dim, action_dim,hidden_size,hidden_size2,hidden_size3,init_w = 3e-3):
         super(CriticTwin,self).__init__()
-        self.hidden_size=hidden_size
-        self.hidden_size2=hidden_size2
-        # self.hidden_size3=hidden_size3
-        self.net_q1=nn.Sequential(
+        self.hidden_size = hidden_size
+        self.hidden_size2 = hidden_size2
+        # self.hidden_size3 = hidden_size3
+        self.net_q1 = nn.Sequential(
             nn.Linear(state_dim+action_dim,self.hidden_size),nn.ReLU(),
             nn.Linear(self.hidden_size,self.hidden_size2),nn.ReLU(),
             #  nn.Linear(self.hidden_size2,self.hidden_size3),nn.ReLU(), 
            )
        
-        self.net_q2=nn.Sequential(
+        self.net_q2 = nn.Sequential(
             nn.Linear(state_dim+action_dim,self.hidden_size),nn.ReLU(),
             nn.Linear(self.hidden_size,self.hidden_size2),nn.ReLU(),
             # nn.Linear(self.hidden_size2,self.hidden_size3),nn.ReLU(),
           )
 
-        self.out_q1=nn.Linear(self.hidden_size2,1)
+        self.out_q1 = nn.Linear(self.hidden_size2,1)
         self.out_q1.weight.data.uniform_(-init_w, init_w)
         self.out_q1.bias.data.uniform_(-init_w, init_w)
 
-        self.out_q2=nn.Linear(self.hidden_size2,1)
+        self.out_q2 = nn.Linear(self.hidden_size2,1)
         self.out_q2.weight.data.uniform_(-init_w, init_w)
         self.out_q2.bias.data.uniform_(-init_w, init_w)
         
@@ -181,18 +181,18 @@ class CriticTwin(nn.Module):
         return torch.min(*self.get_q1_q2(state, action))  # min Q value
 
     def get_q1_q2(self, state, action):
-        x=torch.cat((state,action),dim=1)
+        x = torch.cat((state,action),dim = 1)
         return self.out_q1(self.net_q1(x)),self.out_q2(self.net_q2(x))
 
 
-        # tmp = self.net_sa(torch.cat((state, action), dim=1))
+        # tmp = self.net_sa(torch.cat((state, action), dim = 1))
         # return self.net_q1(tmp), self.net_q2(tmp)  # two Q values
    
 
 ###SAC 版本一网络
 #SAC Q网络,版本一  
 class SoftQNetwork(nn.Module):
-    def __init__(self, state_dim, actions_dim, hidden_size, init_w=3e-3):
+    def __init__(self, state_dim, actions_dim, hidden_size, init_w = 3e-3):
         super(SoftQNetwork, self).__init__()
         
         self.linear1 = nn.Linear(state_dim + actions_dim, hidden_size)
@@ -212,7 +212,7 @@ class SoftQNetwork(nn.Module):
 
 #SAC value网络,版本一
 class ValueNetwork(nn.Module):
-    def __init__(self, state_dim, hidden_dim, init_w=3e-3):
+    def __init__(self, state_dim, hidden_dim, init_w = 3e-3):
         super(ValueNetwork, self).__init__()
          #两层隐藏层
         self.linear1 = nn.Linear(state_dim, hidden_dim)
@@ -238,10 +238,10 @@ class SimpleRNN(nn.Module):
         self.n_layers = n_layers
         self.batch_size = batch_size
         #self.inp = nn.Linear(1, hidden_size) 
-        self.rnn = nn.RNN(x_size, hidden_size, n_layers, batch_first=True)
+        self.rnn = nn.RNN(x_size, hidden_size, n_layers, batch_first = True)
         self.out = nn.Linear(hidden_size, output_size) # 10 in and 10 out
  
-    def forward(self, inputs, hidden=None):
+    def forward(self, inputs, hidden = None):
         hidden = self.__init__hidden()
         #print("Forward hidden {}".format(hidden.shape))
         #print("Forward inps {}".format(inputs.shape))
@@ -253,5 +253,5 @@ class SimpleRNN(nn.Module):
         return output, hidden
  
     def __init__hidden(self):
-        hidden = torch.zeros(self.n_layers, self.batch_size, self.hidden_size, dtype=torch.float64)
+        hidden = torch.zeros(self.n_layers, self.batch_size, self.hidden_size, dtype = torch.float64)
         return hidden

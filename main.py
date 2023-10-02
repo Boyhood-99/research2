@@ -84,10 +84,10 @@ def rlvisual(df_fl_SAC = None, df_fl_DDPG = None, return_ls_SAC = None, return_l
     flvisual(df, date)
 
 ######   return和energy 可视化
-    return_ene_SAC =  pd.read_csv('./SAC/return_ene.csv')
+    return_ene_SAC  =  pd.read_csv('./SAC/return_ene.csv')
     return_ene_DDPG = pd.read_csv('./DDPG/return_ene.csv')
 
-    return_ls_SAC   = return_ls_SAC   if return_ls_SAC   is not None else return_ene_SAC['return']
+    return_ls_SAC  = return_ls_SAC   if return_ls_SAC   is not None else return_ene_SAC['return']
     return_ls_DDPG = return_ls_DDPG   if return_ls_DDPG  is not None else return_ene_DDPG['return']
 
     ene_consum_ls_SAC   = ene_consum_ls_SAC   if ene_consum_ls_SAC   is not None else return_ene_SAC['energy']
@@ -100,8 +100,8 @@ def rlvisual(df_fl_SAC = None, df_fl_DDPG = None, return_ls_SAC = None, return_l
 
     # plt.plot(episode_reward_sac_0, color='r', linewidth=1, linestyle='-',label='without beamforming(location)')
     # plt.plot(episode_reward_sac_1, color='g', linewidth=1, linestyle='-',label='without beamforming(distance)')
-    ax1.plot(return_ls_SAC,  linewidth=1, linestyle='-',label='return with proposed')
-    ax1.plot(return_ls_DDPG, linewidth=1, linestyle='-',label='return with DDPG')
+    ax1.plot(return_ls_SAC,  linewidth = 1, linestyle='-',label='return with proposed')
+    ax1.plot(return_ls_DDPG, linewidth = 1, linestyle='-',label='return with DDPG')
     ax1.set_xlabel('Episodes')
     ax1.set_ylabel('Return')
     
