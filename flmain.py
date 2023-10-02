@@ -14,7 +14,7 @@ from visualization import flvisual, data_dis_visual
 import random
 writer = SummaryWriter('./tensorboard/log/')
 
-#global Epoch: 4, acc: 72.61999999999999, loss: 0.8394354427337647
+#for FL framework training
 
 def main(conf, dir_alpha = 0.3):
 	# torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul

@@ -1,3 +1,5 @@
+##deprecated
+
 """
 Poor Man's Configurator. Probably a terrible idea. Example usage:
 $ python train.py config/override_file.py --batch_size=32

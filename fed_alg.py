@@ -9,6 +9,10 @@ from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter('./tensorboard/log/')
 from datasets import Dataset
 
+
+'''
+implement different FL algorithm
+'''
 class FedAvg():
     def __init__(self, conf,  dir_alpha=0.3) -> None:
             np.random.seed(2023)

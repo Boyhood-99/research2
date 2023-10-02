@@ -6,9 +6,9 @@ from torchsummary import summary
 from torchstat import stat
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import matplotlib.pyplot as plt
-# import mmdet.models.losses.focal_loss as focal_loss
+from utils import FocalLoss
+
+
 
 class Server(object):
 	
@@ -36,7 +36,7 @@ class Server(object):
 		
 		self.eval_loader = torch.utils.data.DataLoader(eval_dataset, batch_size=self.conf["batch_size"], shuffle=True)
 		
-	#模型聚合，不需保留梯度
+	#model parameter aggregation
 	def model_aggregate(self, weight_accumulator):
 		for name, data in self.global_model.state_dict().items():
 			
@@ -76,14 +76,11 @@ class Server(object):
 
 		return acc, total_l
 	
-
 class Client(object):
 
 	def __init__(self, conf, train_dataset, dataset_indice, id = -1, compile = False):
-		
 
 		# self.location = torch.zeros(size=(3))
-		
 		self.conf = conf
 		self.dataset_indice = dataset_indice
 		self.datasize = len(self.dataset_indice)
@@ -159,8 +156,6 @@ class Client(object):
 		
 		# self.criterion = FocalLoss()
 
-		# self.criterion = focal_loss()
-
 		self.prev_grads = self.init_prev_grads()
 		######可视化数据
 		print(f'client {self.client_id}   dataset_size:{len(dataset_indice)}')
@@ -172,6 +167,7 @@ class Client(object):
 		f = sorted(zip(dataset_indice_dic.keys(), dataset_indice_dic.values()), key=lambda x: x[0], reverse=True)
 		print(f'{f}')
 
+	###for FedAvg and FedProx
 	def local_train(self, global_model, global_epoch, local_epochs, name = None):
 
 		for pm_name, param in global_model.state_dict().items():
@@ -273,21 +269,5 @@ class Client(object):
 				prev_grads = torch.cat((prev_grads, torch.zeros_like(param.view(-1))), dim=0)
 		return prev_grads
 
-class FocalLoss(nn.Module):
-    def __init__(self, alpha=1, gamma=2, reduction='mean'):
-        super(FocalLoss, self).__init__()
-        self.alpha = alpha
-        self.gamma = gamma
-        self.reduction = reduction
 
-    def forward(self, inputs, targets):
-        ce_loss = F.cross_entropy(inputs, targets, reduction='none')
-        pt = torch.exp(-ce_loss)
-        focal_loss = self.alpha * (1 - pt) ** self.gamma * ce_loss
 
-        if self.reduction == 'mean':
-            return focal_loss.mean()
-        elif self.reduction == 'sum':
-            return focal_loss.sum()
-        else:
-            return focal_loss

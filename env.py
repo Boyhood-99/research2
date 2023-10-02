@@ -5,12 +5,17 @@ from systemmodel import SystemModel, SystemModel0, SystemModel1, SystemModel2
 from copy import deepcopy
 from fed_alg import FedAvg, FedDyn
 from datasets import Dataset 
+'''
+every environment represents a different design 
+for performance comparison
+'''
 
 
-#state space based on location
-#速度变化,范围变化,x_range = [-20, 2000], y_range = [-100, 100]
+#state space based on location, state excludes new phi parameter
+
+
 class Environment(object):
-    
+    #x_range = [-20, 2000], y_range = [-100, 100]
     def __init__(self, f_uav_num = 5, epsilon = 0.001, end_reward = 0, time_max = 80, 
                 #  x_range = [-20, 2000], y_range = [-100, 100],
                  x_range = [-20, 4000], y_range = [-500, 500],
@@ -31,6 +36,8 @@ class Environment(object):
         self.theta_max  = math.pi/2
         self.v_min = 20
         self.v_max = 30#20
+        self.a_min = 0
+        self.a_max = 2#20
         # self.v_min = 5
         # self.v_max = 10#20
         
@@ -39,6 +46,8 @@ class Environment(object):
         
         self.l_v_min = 5
         self.l_v_max = 40
+        self.a_v_min = 0
+        self.a_v_max = 5
         # self.l_v_min = 5
         # self.l_v_max = 20
 
@@ -239,7 +248,7 @@ class Environment(object):
         
         return self.state, reward, done, np.max(t_up_ + t_down_), np.max(t_comp + t_up_ + t_down_), l, f, d
 
-#state space based on location
+#state space based on location, state includes new phi parameter
 class Environment2(Environment):
     def __init__(self, conf):
         super().__init__()
@@ -249,8 +258,32 @@ class Environment2(Environment):
         # self.fl = FedDyn(conf = self.conf, dir_alpha=0.3)
         datasize = self.fl.get_datasize()
         self.systemmodel = SystemModel2(datasize, f_uav_num=self.f_uav_num,
-                                        )
+                                       )
+    def generate_position(self, init_position, time_max):
+        '''
+        @todo
+        '''
+        # f_uav_v = np.random.uniform(self.v_min, self.v_max, size = (self.f_uav_num, 1))
+        # f_uav_theta = np.random.uniform(self.theta_min, self.theta_max, size = (self.f_uav_num, 1))
+
+        # #底层无人机新坐标
+        # # next_f_uav_location = []
+        # for i in range(self.f_uav_num):
+        #     for j in range(2):
+        #         if j == 0:
+        #             f_uav_location[i][0] += fly_time*f_uav_v[i]*math.cos(f_uav_theta[i])
+        #             f_uav_location[i][0] = max(min(
+        #                     f_uav_location[i][0], self.x_range[1]), self.x_range[0])
+
+        #         else:
+        #             f_uav_location[i][1] += fly_time*f_uav_v[i]*math.sin(f_uav_theta[i])
+        #             f_uav_location[i][1] = max(min(
+        #                 f_uav_location[i][1], self.y_range[1]), self.y_range[0])
+            
         
+        # next_f_uav_location = np.array(f_uav_location)#.reshape(self.f_uav_num, 3)
+        pass
+
     def reset(self):
         self.df_list = []
         self.step_num = 0
@@ -286,8 +319,7 @@ class Environment2(Environment):
         return self.state
 
     def step(self, step_num, action):
-        # assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
-        
+       
         state = self.state
         
         f_uav_location = state[:self.f_uav_num*3]
@@ -446,28 +478,31 @@ class Environment2(Environment):
     def get_fl_time(self, ):
         return self.fl_time
 
-#state space based on distance
+
+
+'''the below is old version, deprecated'''
+#env1, state space based on distance, with DANE FL algorithm
 class Environment1(Environment):
 
     def __init__(self,):
         super().__init__()
-        self.systemmodel=SystemModel1(f_uav_num=self.f_uav_num)
+        self.systemmodel = SystemModel1(f_uav_num=self.f_uav_num)
         
     # 定义每一个episode的初始状态，实现随机初始化
     def reset(self):
         
 
-        # self.distance=np.zeros((self.f_uav_num,1))
-        # self.direction=np.zeros((self.f_uav_num,1))
-        self.distance=20*np.random.random(size=(self.f_uav_num,1))
-        self.direction=2*math.pi*np.random.random(size=(self.f_uav_num,1))
-        self.distance_direction=np.concatenate((self.distance,self.direction),axis=1)#使f_uav的距离和方向相邻
+        # self.distance = np.zeros((self.f_uav_num,1))
+        # self.direction = np.zeros((self.f_uav_num,1))
+        self.distance = 20*np.random.random(size = (self.f_uav_num,1))
+        self.direction = 2*math.pi*np.random.random(size = (self.f_uav_num,1))
+        self.distance_direction = np.concatenate((self.distance,self.direction),axis = 1)#使f_uav的距离和方向相邻
 
-        self.local_accuracy_sum=np.zeros(1)
-        self.time_total=np.zeros(1)
+        self.local_accuracy_sum = np.zeros(1)
+        self.time_total = np.zeros(1)
     
-        self.l_uav_location=np.zeros(2)
-        self.state=np.hstack((self.distance_direction.reshape(self.f_uav_num*2,),self.local_accuracy_sum,self.time_total))
+        self.l_uav_location = np.zeros(2)
+        self.state = np.hstack((self.distance_direction.reshape(self.f_uav_num*2,),self.local_accuracy_sum,self.time_total))
 
 
         return self.state
@@ -475,122 +510,122 @@ class Environment1(Environment):
     def step(self, action):
         
         
-        state=self.state
-        self.action=action
-        l_uav_location=deepcopy(self.l_uav_location)
-        time_total=self.time_total
+        state = self.state
+        self.action = action
+        l_uav_location = deepcopy(self.l_uav_location)
+        time_total = self.time_total
         
-        distance_direction=np.array(state[:self.f_uav_num*2]).reshape(self.f_uav_num,2)
-        distance=distance_direction[:,0]
-        direction=distance_direction[:,1]
+        distance_direction = np.array(state[:self.f_uav_num*2]).reshape(self.f_uav_num,2)
+        distance = distance_direction[:,0]
+        direction = distance_direction[:,1]
 
-        local_accuracy_sum=state[self.f_uav_num*2:self.f_uav_num*2+1]
+        local_accuracy_sum = state[self.f_uav_num*2:self.f_uav_num*2+1]
        
         
-        self.action[0]=(self.l_v_max-self.l_v_min)/2*self.action[0]+(self.l_v_max+self.l_v_min)/2
-        # self.action[1]=(self.theta_max-self.theta_min)/2*self.action[1]+(self.theta_max+self.theta_min)/2
-        self.action[1]=math.pi/2*self.action[1]
-        self.action[2]=math.ceil((self.iteration_max-self.iteration_min)/2*self.action[2]+(self.iteration_max+self.iteration_min)/2)
+        self.action[0] = (self.l_v_max-self.l_v_min)/2*self.action[0]+(self.l_v_max+self.l_v_min)/2
+        # self.action[1] = (self.theta_max-self.theta_min)/2*self.action[1]+(self.theta_max+self.theta_min)/2
+        self.action[1] = math.pi/2*self.action[1]
+        self.action[2] = math.ceil((self.iteration_max-self.iteration_min)/2*self.action[2]+(self.iteration_max+self.iteration_min)/2)
         
-        # local_iteration=math.ceil(2/((2-self.L*self.lamda)*self.lamda*self.gamma)*math.log(1/action[2]))
-        t_down_=self.systemmodel.t_down(distance)
-        t_up_=self.systemmodel.ofdma_t_up(distance)
-        t_comp=self.systemmodel.t_comp(self.action[2])
-        t_agg=self.systemmodel.t_agg(self.t_uav_f)
+        # local_iteration = math.ceil(2/((2-self.L*self.lamda)*self.lamda*self.gamma)*math.log(1/action[2]))
+        t_down_ = self.systemmodel.t_down(distance)
+        t_up_ = self.systemmodel.ofdma_t_up(distance)
+        t_comp = self.systemmodel.t_comp(self.action[2])
+        t_agg = self.systemmodel.t_agg(self.t_uav_f)
         #此处无人机飞行时间为当前状态下，底层无人机计算时间(与本次决策相关)和上下行传输时间(只与当前位置有关)
-        fly_time=np.max(t_comp+t_down_+t_up_)#+t_agg
-        next_time_total=time_total+fly_time
-        self.time_total=next_time_total
+        fly_time = np.max(t_comp+t_down_+t_up_)#+t_agg
+        next_time_total = time_total+fly_time
+        self.time_total = next_time_total
 
         #环境进行下一步
         #无范围限制，随机方向和速度
         '''
         #底层无人机当前随机的速度和方向
-        f_uav_v=np.random.uniform(self.v_min,self.v_max,size=(self.f_uav_num,1))
-        f_uav_theta=np.random.uniform(self.theta_min,self.theta_max,size=(self.f_uav_num,1)) 
+        f_uav_v = np.random.uniform(self.v_min,self.v_max,size = (self.f_uav_num,1))
+        f_uav_theta = np.random.uniform(self.theta_min,self.theta_max,size = (self.f_uav_num,1)) 
 
-        # f_uav_theta_norm=np.clip(np.random.normal(size=(self.f_uav_num,1)),-1,1)      
-        # f_uav_theta=f_uav_theta_norm*self.theta_max
+        # f_uav_theta_norm = np.clip(np.random.normal(size = (self.f_uav_num,1)),-1,1)      
+        # f_uav_theta = f_uav_theta_norm*self.theta_max
         
         #底层无人机下一轮绝对坐标
-        next_f_uav_location=[]
+        next_f_uav_location = []
         for i in range(self.f_uav_num):
             for j in range(2):
-                if j==0:
-                    next_f_uav_location_x=l_uav_location[0]+distance[i]*math.cos(direction[i])+fly_time*f_uav_v[i]*math.cos(f_uav_theta[i])
+                if j == 0:
+                    next_f_uav_location_x = l_uav_location[0]+distance[i]*math.cos(direction[i])+fly_time*f_uav_v[i]*math.cos(f_uav_theta[i])
                     next_f_uav_location.append(next_f_uav_location_x)
                 else:
-                    next_f_uav_location_y=l_uav_location[1]+distance[i]*math.sin(direction[i])+fly_time*f_uav_v[i]*math.sin(f_uav_theta[i])
+                    next_f_uav_location_y = l_uav_location[1]+distance[i]*math.sin(direction[i])+fly_time*f_uav_v[i]*math.sin(f_uav_theta[i])
                     next_f_uav_location.append(next_f_uav_location_y)               
         
         next_f_uav_location = np.array(next_f_uav_location).reshape(self.f_uav_num, 2)'''
 
                 
         #限制范围
-        f_uav_v=np.random.uniform(self.v_min,self.v_max,size=(self.f_uav_num,1))
-        # f_uav_theta=np.random.uniform(self.theta_min,self.theta_max,size=(self.f_uav_num,1))
+        f_uav_v = np.random.uniform(self.v_min,self.v_max,size = (self.f_uav_num,1))
+        # f_uav_theta = np.random.uniform(self.theta_min,self.theta_max,size = (self.f_uav_num,1))
     
-        f_uav_theta=[]
+        f_uav_theta = []
         #x，y方向反向.
         # # for i in range(self.f_uav_num):
         #     if self.direction_flag_x[i]:
-        #         f_uav_theta_i=np.random.uniform(self.theta_min,self.theta_max)
+        #         f_uav_theta_i = np.random.uniform(self.theta_min,self.theta_max)
         #         if self.direction_flag_y[i]:
-        #             f_uav_theta_i=-f_uav_theta_i if f_uav_theta_i>0 else f_uav_theta_i
+        #             f_uav_theta_i = -f_uav_theta_i if f_uav_theta_i>0 else f_uav_theta_i
         #         else:
-        #             f_uav_theta_i=-f_uav_theta_i if f_uav_theta_i<0 else f_uav_theta_i
+        #             f_uav_theta_i = -f_uav_theta_i if f_uav_theta_i<0 else f_uav_theta_i
         #         f_uav_theta.append(f_uav_theta_i)
         #     else:
-        #         f_uav_theta_i=np.random.uniform(self.theta_min,self.theta_max)+math.pi
+        #         f_uav_theta_i = np.random.uniform(self.theta_min,self.theta_max)+math.pi
         #         if self.direction_flag_y[i]:
-        #             f_uav_theta_i=-f_uav_theta_i if f_uav_theta_i>0 else f_uav_theta_i
+        #             f_uav_theta_i = -f_uav_theta_i if f_uav_theta_i>0 else f_uav_theta_i
         #         else:
-        #             f_uav_theta_i=-f_uav_theta_i if f_uav_theta_i<0 else f_uav_theta_i
+        #             f_uav_theta_i = -f_uav_theta_i if f_uav_theta_i<0 else f_uav_theta_i
         #         f_uav_theta.append(f_uav_theta_i)
         
         #x反向，y不变      
         for i in range(self.f_uav_num):
             if self.direction_flag_x[i]:
-                f_uav_theta_i=np.random.uniform(self.theta_min,self.theta_max)
+                f_uav_theta_i = np.random.uniform(self.theta_min,self.theta_max)
                 f_uav_theta.append(f_uav_theta_i)
             else:
-                f_uav_theta_i=np.random.uniform(self.theta_min,self.theta_max)+math.pi
+                f_uav_theta_i = np.random.uniform(self.theta_min,self.theta_max)+math.pi
                 f_uav_theta.append(f_uav_theta_i)
              
         f_uav_theta = np.array(f_uav_theta)
         
 
         #底层无人机下一轮绝对坐标
-        next_f_uav_location=[]
+        next_f_uav_location = []
         for i in range(self.f_uav_num):
             for j in range(2):
-                if j==0:
-                    next_f_uav_location_x=l_uav_location[0]+distance[i]*math.cos(direction[i])+fly_time*f_uav_v[i]*math.cos(f_uav_theta[i])
+                if j == 0:
+                    next_f_uav_location_x = l_uav_location[0]+distance[i]*math.cos(direction[i])+fly_time*f_uav_v[i]*math.cos(f_uav_theta[i])
                     # if next_f_uav_location_x>self.x_range[1]:
-                    #     self.direction_flag_x[i]=0
-                    #     next_f_uav_location_x=self.x_range[1]
-                    #     # next_f_uav_location_x=max(min(
+                    #     self.direction_flag_x[i] = 0
+                    #     next_f_uav_location_x = self.x_range[1]
+                    #     # next_f_uav_location_x = max(min(
                     #     #     l_uav_location[0]+distance[i]*math.cos(direction[i])+fly_time*f_uav_v[i]*math.cos(f_uav_theta[i]),self.x_range[1]),self.x_range[0])
                     # elif next_f_uav_location_x<self.x_range[0]:
-                    #     self.direction_flag_x[i]=1
-                    #     next_f_uav_location_x=self.x_range[0]
+                    #     self.direction_flag_x[i] = 1
+                    #     next_f_uav_location_x = self.x_range[0]
                     # else:
                     #     pass
-                    next_f_uav_location_x=max(min(
+                    next_f_uav_location_x = max(min(
                             next_f_uav_location_x,self.x_range[1]),self.x_range[0])
                     next_f_uav_location.append(next_f_uav_location_x)
                 else:
-                    next_f_uav_location_y=l_uav_location[1]+distance[i]*math.sin(direction[i])+fly_time*f_uav_v[i]*math.sin(f_uav_theta[i])
+                    next_f_uav_location_y = l_uav_location[1]+distance[i]*math.sin(direction[i])+fly_time*f_uav_v[i]*math.sin(f_uav_theta[i])
                     # if next_f_uav_location_y>self.y_range[1]:
-                    #     self.direction_flag_y[i]=1
-                    #     next_f_uav_location_y=self.y_range[1]                      
+                    #     self.direction_flag_y[i] = 1
+                    #     next_f_uav_location_y = self.y_range[1]                      
                     # elif next_f_uav_location_y<self.y_range[0]:
-                    #     self.direction_flag_y[i]=0
-                    #     next_f_uav_location_y=self.y_range[0]
+                    #     self.direction_flag_y[i] = 0
+                    #     next_f_uav_location_y = self.y_range[0]
                     # else:
                     #     pass
         
-                    next_f_uav_location_y=max(min(
+                    next_f_uav_location_y = max(min(
                         next_f_uav_location_y,self.y_range[1]),self.y_range[0])
                     next_f_uav_location.append(next_f_uav_location_y)
 
@@ -600,88 +635,89 @@ class Environment1(Environment):
 
         #顶层无人机新坐标
 
-        l_uav_location[0]=l_uav_location[0]+self.action[0]*math.cos(self.action[1])*fly_time
-        l_uav_location[1]=l_uav_location[1]+self.action[0]*math.sin(self.action[1])*fly_time
+        l_uav_location[0] = l_uav_location[0]+self.action[0]*math.cos(self.action[1])*fly_time
+        l_uav_location[1] = l_uav_location[1]+self.action[0]*math.sin(self.action[1])*fly_time
         
-        l_uav_location[0]=max(min(
+        l_uav_location[0] = max(min(
             l_uav_location[0],self.x_range[1]),self.x_range[0])
-        l_uav_location[1]=max(min(
+        l_uav_location[1] = max(min(
             l_uav_location[1],self.y_range[1]),self.y_range[0])
         
-        self.l_uav_location=deepcopy(l_uav_location)
+        self.l_uav_location = deepcopy(l_uav_location)
 
-        next_distance=[]
-        next_direction=[]
-        next_true_distance=[]
+        next_distance = []
+        next_direction = []
+        next_true_distance = []
 
         #当前相对水平距离和方位角
         for i in range(self.f_uav_num):
-            d_=math.sqrt((next_f_uav_location[i][0]-l_uav_location[0])**2+(next_f_uav_location[i][1]-l_uav_location[1])**2)
+            d_ = math.sqrt((next_f_uav_location[i][0]-l_uav_location[0])**2+(next_f_uav_location[i][1]-l_uav_location[1])**2)
 
-            di_=math.atan2((next_f_uav_location[i][1]-l_uav_location[1]),(next_f_uav_location[i][0]-l_uav_location[0]))
+            di_ = math.atan2((next_f_uav_location[i][1]-l_uav_location[1]),(next_f_uav_location[i][0]-l_uav_location[0]))
 
             next_true_distance.append(math.sqrt(d_**2+(self.f_uav_H-self.l_uav_H )**2))
             next_distance.append(d_)
             next_direction.append(di_)
 
-        next_true_distance=np.array(next_true_distance).reshape(self.f_uav_num,1)
-        next_distance=np.array(next_distance).reshape(self.f_uav_num,1)
-        next_direction=np.array(next_direction).reshape(self.f_uav_num,1)
+        next_true_distance = np.array(next_true_distance).reshape(self.f_uav_num,1)
+        next_distance = np.array(next_distance).reshape(self.f_uav_num,1)
+        next_direction = np.array(next_direction).reshape(self.f_uav_num,1)
         
-        next_distance_direction=np.concatenate((next_distance,next_direction),axis=1)
+        next_distance_direction = np.concatenate((next_distance,next_direction),axis = 1)
         #当前距离
       
       
         #局部精度公式求和
-        yita=math.exp(-self.action[2]*(2-self.L*self.lamda)*self.lamda*self.gamma/2)
-        local_accuracy=math.log(1-((1-yita)*self.gamma**2*self.ksi)/(2*self.L**2))
-        next_local_accuracy_sum=local_accuracy_sum+local_accuracy
+        yita = math.exp(-self.action[2]*(2-self.L*self.lamda)*self.lamda*self.gamma/2)
+        local_accuracy = math.log(1-((1-yita)*self.gamma**2*self.ksi)/(2*self.L**2))
+        next_local_accuracy_sum = local_accuracy_sum+local_accuracy
       
         
         #判断下一个观察状态下，本次episode是否结束
 
         done = 1 if next_local_accuracy_sum<math.log(self.epsilon) else 0
-        done=np.array(done)
+        done = np.array(done)
 
         #环境状态改变,下一个state
-        next_state=np.hstack((next_distance_direction.reshape(self.f_uav_num*2,),next_local_accuracy_sum,self.time_total))
+        next_state = np.hstack((next_distance_direction.reshape(self.f_uav_num*2,),next_local_accuracy_sum,self.time_total))
 
-        self.state=next_state
+        self.state = next_state
         #奖励函数求解
         
         #日常奖励
         reward1 = 0
         reward2 = np.array(( -fly_time) * self.systemmodel.p_fly(action[0])/ 1000)
 
-        # if l_uav_location[0]==self.x_range[1] or l_uav_location[0]==self.x_range[0]:
-        #     reward-=self.penalty
-        # if l_uav_location[1]==self.y_range[1] or l_uav_location[1]==self.y_range[0]:
-        #     reward-=self.penalty
+        # if l_uav_location[0] == self.x_range[1] or l_uav_location[0] == self.x_range[0]:
+        #     reward-= self.penalty
+        # if l_uav_location[1] == self.y_range[1] or l_uav_location[1] == self.y_range[0]:
+        #     reward-= self.penalty
 
         # if np.sum(next_true_distance>self.distance_max):
-        #     reward-=self.distance_penalty
+        #     reward-= self.distance_penalty
             
         # if np.sum(next_true_distance>self.distance_max):
-        #     self.outofdistance+=1
+        #     self.outofdistance += 1
 
         #结算奖励
         # if done :
-        #     reward2+=self.end_reward
+        #     reward2 += self.end_reward
         #     if self.time_total>self.time_max:
-        #         reward2-=self.time_penalty
+        #         reward2-= self.time_penalty
 
             # if self.outofdistance:
-            #     reward-=1
-            #     self.outofdistance=0
+            #     reward-= 1
+            #     self.outofdistance = 0
 
-        l=deepcopy(self.l_uav_location)
-        f=deepcopy(next_f_uav_location)
-        d=deepcopy(np.max(next_true_distance))
-        reward=reward1+reward2
+        l = deepcopy(self.l_uav_location)
+        f = deepcopy(next_f_uav_location)
+        d = deepcopy(np.max(next_true_distance))
+        reward = reward1+reward2
         
         return self.state, reward, done,np.max(t_up_+t_down_),np.max(t_comp+t_up_+t_down_),l, f,d,
 
-#state space based on location
+
+#env0, state space based on location, with DANE FL algorithm
 class Environment0(Environment):
 
     def __init__(self,):
@@ -780,10 +816,6 @@ class Environment0(Environment):
         
         self.l_uav_location = deepcopy(l_uav_location)
 
-        
-
-        #局部精度公式求和
-      
       
         yita = math.exp(-action[2]*(2-self.L*self.lamda)*self.lamda*self.gamma/2)
         local_accuracy = math.log(1-((1-yita)*self.gamma**2*self.ksi)/(2*self.L**2))

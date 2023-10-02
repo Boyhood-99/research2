@@ -5,7 +5,9 @@ import torch.nn.functional as F
 # You can also use `weights=ResNet50_Weights.DEFAULT` to get the most up-to-date weights.
 
 
-
+'''
+old version for getting model from torch or builting new model
+'''
 def get_model(name="resnet50",):
 	if name == "resnet18":
 		model = models.resnet18(weights =models.ResNet18_Weights.DEFAULT)

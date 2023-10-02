@@ -2,30 +2,30 @@ from dataclasses import dataclass
 import torch
 @dataclass
 class ConfigDraw:
-    Q_LOSS_FLAG=0
-    Q_VALUE_FLAG=0
+    Q_LOSS_FLAG = 0
+    Q_VALUE_FLAG = 0
 
-    DDPG_TRA_FLAG=0
-    SAC_TRA_FLAG=0
-    FIX_TRA_FLAG=0
+    DDPG_TRA_FLAG = 0
+    SAC_TRA_FLAG = 0
+    FIX_TRA_FLAG = 0
 
-    ALGRITHM_FLAG=1
-    POLICY_FLAG=0
-    LEARNING_RATE=0
+    ALGRITHM_FLAG = 1
+    POLICY_FLAG = 0
+    LEARNING_RATE = 0
 
-    TIME_FLAG=0
-    DISTANCE_FLAG=0
+    TIME_FLAG = 0
+    DISTANCE_FLAG = 0
 
-    TRA_COMPARISION=0
+    TRA_COMPARISION = 0
 
-    F_UAV_NUM_COM=0
-    ACCURACY_FLAG=0
+    F_UAV_NUM_COM = 0
+    ACCURACY_FLAG = 0
 
-    BAR_FLAG=0
+    BAR_FLAG = 0
 
 @dataclass
 class ConfigTrain:
-    DEVICE=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     MAX_EPISODES = 100
     BATCHSIZE = 256 ##256
 

@@ -17,10 +17,10 @@ import os
 sys.path.append('/root/paper2/RL')
 writer = SummaryWriter('./tensorboard/log/')
 
-##原来的40 收敛， 100episodes足够
+
 ###time is episodes*global_epochs*local_epochs*4s  such as 50*100*2*4 =40000s = 12h
 
-##20个global epoch, 2s, -0.3energy
+##twenty global epochs, 2s, -0.3 energy
 def train(conf, rl, dir):
     # np.random.seed(2023)
     # torch.manual_seed(2023)
@@ -142,6 +142,9 @@ if __name__ == '__main__':
     conf['config_train'] = config_train
     conf["config_draw"] = config_draw 
 
+
+    ##you can train from the start or get data from saved csv file
+    
     # return_ls_SAC, ene_consum_ls_SAC, df_fl_SAC = train(conf, AgentSAC(conf, dir='SAC/'), dir='SAC/')
     # return_ls_DDPG, ene_consum_ls_DDPG, df_fl_DDPG = train(conf, AgentDDPG(conf, dir='DDPG/'), dir='DDPG/')
 

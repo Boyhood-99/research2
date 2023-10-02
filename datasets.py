@@ -13,7 +13,15 @@ import numpy as np
 #池化层
 #输出特征图高度 = （输入特征图高度 - 池化窗口高度）/ 步幅 + 1
 #输出特征图宽度 = （输入特征图宽度 - 池化窗口宽度）/ 步幅 + 1
+
+
 class Dataset(object):
+    '''
+    #cifar10训练集每个data_batch,10000,其中十个类别是随机独立同分布,
+    #DATA.sampler.SubsetRandomSampler用于从给定列表按照列表元素对应样本索引在数据集中抽取样本并
+    # 进行打乱，比如抽取样本索引为[25，86，34，75],返回给loader可能会变为[34,86,25,75]
+    #因此不需要shuffle进行打乱，因为已经打乱了
+    '''
     def __init__(self, conf, dir_alpha = 0.3) -> None:
         self.conf = conf
         self.train_dataset, self.eval_dataset = self.get_dataset(self.conf['data_dir'], self.conf['type'])
@@ -59,14 +67,10 @@ class Dataset(object):
         print(num_samples)
         
         client_sample_nums  = [np.random.randint(800,1000) for i in range(num_clients)]
-        # client_sample_nums  = [np.array(10000) for i in range(num_clients)]
-        ######---------------------------------#客户端平分数据集
-        
-        #cifar10训练集每个data_batch,10000,其中十个类别是随机独立同分布,
-        #DATA.sampler.SubsetRandomSampler用于从给定列表按照列表元素对应样本索引在数据集中抽取样本并
-        # 进行打乱，比如抽取样本索引为[25，86，34，75],返回给loader可能会变为[34,86,25,75]
-        #因此不需要shuffle进行打乱，因为已经打乱了
+       
 
+        ####absolutely balance and iid
+        # client_sample_nums  = [np.array(10000) for i in range(num_clients)]
         # dataset_indice_list = []
         # all_range = list(range(len(self.train_dataset)))
         # data_len = int(len(self.train_dataset) / num_clients)
@@ -75,7 +79,7 @@ class Dataset(object):
         #     dataset_indice_list.append(dataset_indice)
 
 
-        ####利用fedlab生成数据分布------------------------------
+        #######generate data distribution by fedlab------------------
         num_classes = 10
         seed = 2023
         #####Hetero Dirichlet
@@ -133,7 +137,7 @@ class Dataset(object):
         # for i in range(num_clients):
         #     dataset_indice = cifar10part.client_dict[i]
         #     dataset_indice_list.append(dataset_indice)
-        #######---------------------------
+        #######------------------------generate data distribution by myself
         print(client_sample_nums)
         client_dic = self.client_inner_dirichlet_partition_v2(self.train_dataset.targets, num_clients=num_clients,num_classes=num_classes,
                                                            dir_alpha=dir_alpha, client_sample_nums=client_sample_nums, seed=seed)
@@ -158,7 +162,7 @@ class Dataset(object):
             targets = np.array(targets)
         if not isinstance(client_sample_nums, np.ndarray):
             client_sample_nums = np.array(client_sample_nums)
-
+        ####
         client_priors = np.random.dirichlet(alpha=[dir_alpha] * num_clients,
                                         size=num_classes)
         prior_cumsum = np.cumsum(client_priors, axis=1)
@@ -197,7 +201,7 @@ class Dataset(object):
         client_dict = {cid: client_indices[cid] for cid in range(num_clients)}
         return client_dict
     
-        ####
+        #######solution2, not suitable for sampling few data
         # class_priors = np.random.dirichlet(alpha=[dir_alpha] * num_classes,
         #                                 size=num_clients)
         # while np.sum(client_sample_nums) != 0:
@@ -223,6 +227,7 @@ class Dataset(object):
     
     def client_inner_dirichlet_partition_v2(self, targets, num_clients, num_classes, dir_alpha,
                                      client_sample_nums, verbose=False, seed=2023):
+        '''old version '''
         # np.random.seed(seed)
         if not isinstance(targets, np.ndarray):
             targets = np.array(targets)
@@ -280,81 +285,3 @@ class Dataset(object):
         return client_dict
 
 
-
-# labels = np.argmax(train_labels, axis=1)
-# # 对数据标签进行排序
-
-# order = np.argsort(labels)
-# print("标签下标排序")
-# print(train_labels[order[0:10]])
-# self.train_data = train_images[order]
-# self.train_label = train_labels[order]
-
-# if i ==0:
-            #     # print("client_dict[0]:",dataset_indice)
-            #     pass
-
-	
-
-
-
-
-
-from torchvision import transforms
-from torchvision.datasets import CIFAR10 as cifar10
-from torch.utils.data import random_split
-
-
-
-
-def CIFAR10(params):
-    mean_val = [0.4914, 0.4822, 0.4465]
-    std_val = [0.2470, 0.2435, 0.2616]
-    save_path = './data'
-
-    random_transform1 = transforms.RandomHorizontalFlip(p=0.5)
-    random_transform2 = transforms.Compose([transforms.Pad(padding=4),
-                                            transforms.RandomCrop((32, 32))])
-
-    train_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=mean_val,
-                             std=std_val),
-        transforms.RandomChoice([random_transform1, random_transform2]),
-
-    ])
-
-    test_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=mean_val,
-                             std=std_val),
-    ])
-
-    train_dataset = cifar10(save_path,
-                            train=True,
-                            download=True,
-                            transform=train_transform)
-
-    test_dataset = cifar10(save_path,
-                           train=False,
-                           download=True,
-                           transform=test_transform)
-
-    train_size = int(params['split']['train'] * len(train_dataset))
-    valid_size = int(params['split']['valid'] * len(train_dataset))
-    train_other_size = len(train_dataset) - train_size - valid_size
-
-    train_datasets = random_split(train_dataset, [train_size,
-                                                  valid_size,
-                                                  train_other_size])
-
-    test_size = int(params['split']['test'] * len(test_dataset))
-    test_other_size = len(test_dataset) - test_size
-
-    test_datasets = random_split(test_dataset, [test_size,
-                                                test_other_size])
-
-    train_dataset, valid_dataset, _ = train_datasets
-    test_dataset, _ = test_datasets
-
-    return train_dataset, valid_dataset, test_dataset
