@@ -8,10 +8,10 @@ from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter('./tensorboard/log/')
 from datasets import Dataset
-
+import numpy as np
 
 '''
-implement different FL algorithm
+implementation of different FL algorithms
 '''
 class FedAvg():
     def __init__(self, conf,  dir_alpha=0.3) -> None:
@@ -29,7 +29,6 @@ class FedAvg():
             
             num_clients = self.conf['f_uav_num']
             self.clients = []
-
             for i in range(num_clients):  
                 self.clients.append(Client(self.conf,  self.dataset.train_dataset, self.dataset.dataset_indice_list[i], id=i, compile = self.conf['compile']))
 
@@ -60,11 +59,12 @@ class FedAvg():
         date = datetime.datetime.now().strftime('%m-%d')
         
         self.candidates = []
+        self.datasize_total = 0
         for i in self.conf['candidates']:
-            self.candidates.append(self.clients[i])		
-        weight_accumulator = {}
-        for name, params in self.server.global_model.state_dict().items():
-            weight_accumulator[name] = torch.zeros_like(params)
+            can = self.clients[i]
+            assert isinstance(can, Client)
+            self.datasize_total += can.datasize
+            self.candidates.append(can)		
 
         self.global_epoch_dic = {} #for print log
         # self.global_epoch_dic['global Epoch'] = global_epoch
@@ -100,8 +100,17 @@ class FedAvg():
             # 	weight_accumulator[name].add_(diff[name])
             # 	global_epoch_dic[f'f_uav{candidates[i].client_id}'] = loss_dic
         loss_list = []
+        
+        weight_accumulator = {}
+        for name, params in self.server.global_model.state_dict().items():
+            weight_accumulator[name] = torch.zeros_like(params)
+        local_models_ls = {}
+        weights = {}
         for i in range(num_candidate):
-            diff, loss_dic = threads[i].getresult()
+            thread = threads[i]
+            diff, loss_dic, local_model, can_id = thread.getresult()
+            local_models_ls[f'{i}'] = local_model
+            weights[f'{can_id}'] = self.clients[can_id].datasize/self.datasize_total
 
             loss_list.append(loss_dic[f'local epoch{local_epochs - 1} loss'])
             
@@ -111,10 +120,10 @@ class FedAvg():
                 # self.global_epoch_dic[f'f_uav{candidates[i].client_id}'] = loss_dic
             # print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")
         #--------------------------------------------多线程
-
         avg_local_loss = np.array(loss_list).mean()
         
-        self.server.model_aggregate(weight_accumulator)
+        # self.server.model_aggregate(weight_accumulator)
+        self.server.model_agg(local_models_ls, weights)
         #-------------------------------------
         # if global_epoch <10:
         # 	acc, loss = server.model_eval()#耗时

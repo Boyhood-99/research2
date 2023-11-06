@@ -6,8 +6,8 @@ from torchsummary import summary
 from torchstat import stat
 import torch.nn as nn
 import torch.nn.functional as F
-from utils import FocalLoss
-
+from utils import FocalLoss, FedDecorrLoss
+from argparse import ArgumentParser
 
 
 class Server(object):
@@ -39,14 +39,27 @@ class Server(object):
 	#model parameter aggregation
 	def model_aggregate(self, weight_accumulator):
 		for name, data in self.global_model.state_dict().items():
-			
+			##the weight is constant lambda
 			update_per_layer = weight_accumulator[name] * self.conf["lambda"]
-			
 			if data.type() != update_per_layer.type():
 				data.add_(update_per_layer.to(torch.int64))
 			else:
 				data.add_(update_per_layer)
-				
+
+	def model_agg(self, local_models, weights):
+		global_w = self.global_model.state_dict()
+		# print(type(local_models))
+		for i, (key, net) in enumerate(local_models.items()):
+			net_par = net.state_dict()
+			if i== 0:
+				for name, par in net_par.items():
+					global_w[name] = par*weights[key]
+			else:
+				for name, par in net_par.items():
+					global_w[name] += par*weights[key]
+		self.global_model.load_state_dict(global_w)
+
+
 	def model_eval(self):
 		
 		self.global_model.eval()
@@ -63,7 +76,7 @@ class Server(object):
 				target = target.cuda()
 				
 			
-			output = self.global_model(data)
+			output, feature = self.global_model(data)
 			
 			total_loss += torch.nn.functional.cross_entropy(output, target,
 											  reduction='sum').item() # sum up batch loss
@@ -79,7 +92,8 @@ class Server(object):
 class Client(object):
 
 	def __init__(self, conf, train_dataset, dataset_indice, id = -1, compile = False):
-
+		self.feddecorr = 0
+		self.feddecorr_coef = 0.1
 		# self.location = torch.zeros(size=(3))
 		self.conf = conf
 		self.dataset_indice = dataset_indice
@@ -169,6 +183,7 @@ class Client(object):
 
 	###for FedAvg and FedProx
 	def local_train(self, global_model, global_epoch, local_epochs, name = None):
+		feddecorr = FedDecorrLoss()
 
 		for pm_name, param in global_model.state_dict().items():
 			self.local_model.state_dict()[pm_name].copy_(param.clone())
@@ -187,19 +202,23 @@ class Client(object):
 			
 				self.optimizer.zero_grad()
 				#前向传播
-				output = self.local_model(data)
+				output, feature = self.local_model(data)
 				# loss = torch.nn.functional.cross_entropy(output, target)
 				loss = self.criterion(output, target)
+
+				### for FedProx
 				if name == 'FedProx':
 					proximal_term = 0.0
 					for w, w_t in zip(self.local_model.parameters(), global_model.parameters()):
 						proximal_term += (w - w_t).norm(2)
 					loss = loss + (self.conf['mu'] / 2) * proximal_term
+				if self.feddecorr:
+					loss_feddecorr = feddecorr(feature)
+					loss = loss + self.feddecorr_coef * loss_feddecorr
 
 				#反向传播
 				loss.backward()
 				self.optimizer.step()
-				
 				
 			# print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")
 			
@@ -212,7 +231,7 @@ class Client(object):
 			diff[name] = (data - global_model.state_dict()[name])
 			# diff[name] = data.sub_(global_model.state_dict()[name])
 			
-		return diff , loss_dic
+		return diff , loss_dic, self.local_model, self.client_id
 	
 
 	def train_FedDyn(self, global_model,  prev_grads,  local_epochs, name = None):
@@ -268,6 +287,16 @@ class Client(object):
 			else:
 				prev_grads = torch.cat((prev_grads, torch.zeros_like(param.view(-1))), dim=0)
 		return prev_grads
+
+
+	def extra_parser(extra_args):
+		parser = ArgumentParser()
+        # feddecorr arguments
+		parser.add_argument('--feddecorr', action='store_true',
+                            help='whether to use FedDecorr')
+		parser.add_argument('--feddecorr_coef', type=float, default=0.1,
+                            help='coefficient of the FedDecorr loss')
+		return parser.parse_args(extra_args)
 
 
 

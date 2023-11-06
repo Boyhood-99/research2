@@ -6,6 +6,7 @@ from uav import *
 from datasets import Dataset
 from tqdm import tqdm
 import time
+import numpy as np
 from utils import TrainThread
 from configuration import ConfigDraw, ConfigTrain
 from torchinfo import summary
@@ -61,12 +62,15 @@ def main(conf, dir_alpha = 0.3):
 		# candidates = random.sample(clients, conf["k"])
 		# candidates = clients
 		candidates = []
+		datasize_total = 0
 		for i in conf['candidates']:
 			candidates.append(clients[i])	
+			datasize_total += clients[i].datasize
+
 
 		local_epochs = random.randint(2, 11)	
 		
-		# local_epochs = conf['local_epochs']
+		local_epochs = conf['local_epochs']
 		print(local_epochs)
 		weight_accumulator = {}
 		for name, params in server.global_model.state_dict().items():
@@ -96,7 +100,6 @@ def main(conf, dir_alpha = 0.3):
 															) )
 			# thread.setDaemon(True)
 			threads.append(thread)
-		# for thread in threads:
 			threads[-1].start()
 
 		for thread in threads:
@@ -106,9 +109,12 @@ def main(conf, dir_alpha = 0.3):
 			# for name, params in server.global_model.state_dict().items():
 			# 	weight_accumulator[name].add_(diff[name])
 			# 	global_epoch_dic[f'f_uav{candidates[i].client_id}'] = loss_dic
-		
+		local_models_ls = {}
+		weights = {}
 		for i in range(num_candidate):
-			diff, loss_dic = threads[i].getresult()
+			diff, loss_dic, local_model, can_id = threads[i].getresult()
+			local_models_ls[f'{can_id}'] = local_model
+			weights[f'{can_id}'] = clients[can_id].datasize/datasize_total
 			
 			for name, params in server.global_model.state_dict().items():
 				weight_accumulator[name].add_(diff[name])
@@ -117,6 +123,7 @@ def main(conf, dir_alpha = 0.3):
 		#--------------------------------------------多线程
 		
 		server.model_aggregate(weight_accumulator)
+		# server.model_agg(local_models_ls, weights)
 
 		#-------------------------------------
 		# if global_epoch < 10 or global_epoch == conf["global_epochs"] - 1:
@@ -173,8 +180,9 @@ if __name__ == '__main__':
     # df1 = main(conf=conf, dir_alpha=0.3)
     # df2 = main(conf=conf, dir_alpha=0.6)
     # df3 = main(conf=conf, dir_alpha=1)
-    df4 = main(conf=conf, dir_alpha=10)
-    df_list = [(df1, 0.3), 
+    df4 = main(conf=conf, dir_alpha=0.3)
+    df_list = [
+			(df1, 0.3), 
 	       (df2, 0.6), 
 		   (df3, 1), 
 		   (df4, 10),

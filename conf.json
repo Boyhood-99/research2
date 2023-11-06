@@ -20,7 +20,7 @@
 	
 	"global_epochs" : 20,
 	
-	"local_epochs" : 5,
+	"local_epochs" : 1,
 	"#local_epochs" : 5,
 	"local_epochs_min":2,
 	"local_epochs_max":10,

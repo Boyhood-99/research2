@@ -11,7 +11,7 @@ class Net(nn.Module):
         self.action_dim = action_dim
         self.actor = Actor(self.state_dim,self.action_dim)
         self.critic = Critic(self.state_dim,self.action_dim)
-  
+
 '''class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, action_bound):
         super(Actor,self).__init__()
@@ -92,7 +92,7 @@ class Critic(nn.Module):
         return q_value
 
         
-   #SAC     
+#SAC     
 
 #SAC Actor-network 
 class PolicyNetwork(nn.Module):
