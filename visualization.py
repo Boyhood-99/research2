@@ -56,7 +56,7 @@ font = {'family' : 'Times New Roman',
 plt.rc('font', **font)
 
 
-def data_dis_visual(df_list, flag = None, diretory = f'./data_dis/'):
+def data_dis_visual(df_list, flag = None, diretory = f'./output/data_output/'):
     # df = pd.read_csv('./log07-05.csv')
     len_ = len(df_list[0][0])
     fig1, ax1 = plt.subplots()
@@ -88,7 +88,7 @@ def data_dis_visual(df_list, flag = None, diretory = f'./data_dis/'):
     fig2.savefig(os.path.join(diretory, 'loss_.eps'))
 
 
-def flvisual(df, date, diretory = f'./FL/'):
+def flvisual(df, date, diretory = f'./output/main_output/FL/'):
     if not os.path.exists(diretory):
         os.makedirs(diretory)
     # df = pd.read_csv('./log07-05.csv')

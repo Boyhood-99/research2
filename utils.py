@@ -11,8 +11,9 @@ class FedDecorrLoss(nn.Module):
         super(FedDecorrLoss, self).__init__()
         self.eps = 1e-8
 
+    # return a flattened view of the off-diagonal elements of a square matrix
     def _off_diagonal(self, mat):
-        # return a flattened view of the off-diagonal elements of a square matrix
+        
         n, m = mat.shape
         assert n == m
         return mat.flatten()[:-1].view(n - 1, n + 1)[:, 1:].flatten()

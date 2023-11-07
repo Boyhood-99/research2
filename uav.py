@@ -251,9 +251,9 @@ class Client(object):
 				if torch.cuda.is_available():
 					data = data.cuda()
 					target = target.cuda()
-			
+					
 				self.optimizer.zero_grad()
-				output = self.local_model(data)
+				output, feature = self.local_model(data)
 				
 				loss_a = self.criterion(output, target)
 			

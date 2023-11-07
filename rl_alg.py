@@ -7,7 +7,7 @@ import torch.nn as nn
 from buffer import ReplayBuffer
 from copy import deepcopy
 from torch.distributions import Normal
-
+from rl_net import *
 ###there are some rl algrithms
 
 # DDPG algrithm easily converge to the action edge, cause some 

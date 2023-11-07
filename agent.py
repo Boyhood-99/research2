@@ -163,7 +163,6 @@ class AgentDDPG(AgentSAC):
         return self.ep_reward, energy_consum
 
         
-        
     
     def episode_test(self, i, global_epochs):
         return super().episode_test(i, global_epochs)

@@ -5,7 +5,7 @@ import datetime
 from uav import *
 from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
-from visualization import rlvisual_prev, flvisual
+from visualization import  flvisual
 from configuration import ConfigDraw, ConfigTrain
 from agent import AgentSAC, AgentDDPG
 import matplotlib.pyplot as plt
@@ -70,8 +70,8 @@ def train(conf, rl, dir):
 def rlvisual(df_fl_SAC = None, df_fl_DDPG = None, return_ls_SAC = None, return_ls_DDPG = None, 
             ene_consum_ls_SAC = None, ene_consum_ls_DDPG = None, 
             ):
-    df_fl_SAC  = df_fl_SAC   if df_fl_SAC  is not None else pd.read_csv('./SAC/acc_loss.csv')
-    df_fl_DDPG = df_fl_DDPG  if df_fl_DDPG is not None else pd.read_csv('./DDPG/acc_loss.csv')
+    df_fl_SAC  = df_fl_SAC   if df_fl_SAC  is not None else pd.read_csv('./output/main_output/SAC/acc_loss.csv')
+    df_fl_DDPG = df_fl_DDPG  if df_fl_DDPG is not None else pd.read_csv('./output/main_output/DDPG/acc_loss.csv')
 
 
 
@@ -84,8 +84,8 @@ def rlvisual(df_fl_SAC = None, df_fl_DDPG = None, return_ls_SAC = None, return_l
     flvisual(df, date)
 
 ######   return和energy 可视化
-    return_ene_SAC  =  pd.read_csv('./SAC/return_ene.csv')
-    return_ene_DDPG = pd.read_csv('./DDPG/return_ene.csv')
+    return_ene_SAC  =  pd.read_csv('./output/main_output/SAC/return_ene.csv')
+    return_ene_DDPG = pd.read_csv('./output/main_output/DDPG/return_ene.csv')
 
     return_ls_SAC  = return_ls_SAC   if return_ls_SAC   is not None else return_ene_SAC['return']
     return_ls_DDPG = return_ls_DDPG   if return_ls_DDPG  is not None else return_ene_DDPG['return']
@@ -106,9 +106,9 @@ def rlvisual(df_fl_SAC = None, df_fl_DDPG = None, return_ls_SAC = None, return_l
     ax1.set_ylabel('Return')
     
     ax1.legend()
-    fig1.savefig('./SAC/ddpg+sac_return.jpg')
-    fig1.savefig('./SAC/ddpg+sac_return.eps')
-    fig1.savefig('./SAC/ddpg+sac_return.pdf')
+    fig1.savefig('./output/main_output/SAC/ddpg+sac_return.jpg')
+    fig1.savefig('./output/main_output/SAC/ddpg+sac_return.eps')
+    fig1.savefig('./output/main_output/SAC/ddpg+sac_return.pdf')
 
     ########
     fig2, ax2 = plt.subplots()
@@ -119,9 +119,9 @@ def rlvisual(df_fl_SAC = None, df_fl_DDPG = None, return_ls_SAC = None, return_l
     ax2.set_ylabel('Energy consumption (kJ)')
 
     ax2.legend()
-    fig2.savefig('./SAC/ddpg+sac_energy.jpg')
-    fig2.savefig('./SAC/ddpg+sac_energy.eps')
-    fig2.savefig('./SAC/ddpg+sac_energy.pdf')
+    fig2.savefig('./output/main_output/SAC/ddpg+sac_energy.jpg')
+    fig2.savefig('./output/main_output/SAC/ddpg+sac_energy.eps')
+    fig2.savefig('./output/main_output/SAC/ddpg+sac_energy.pdf')
     
     return 
 
@@ -145,7 +145,7 @@ if __name__ == '__main__':
 
     ##you can train from the start or get data from saved csv file
     
-    # return_ls_SAC, ene_consum_ls_SAC, df_fl_SAC = train(conf, AgentSAC(conf, dir='SAC/'), dir='SAC/')
+    return_ls_SAC, ene_consum_ls_SAC, df_fl_SAC = train(conf, AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
     # return_ls_DDPG, ene_consum_ls_DDPG, df_fl_DDPG = train(conf, AgentDDPG(conf, dir='DDPG/'), dir='DDPG/')
 
     if True:

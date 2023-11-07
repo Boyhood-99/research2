@@ -236,6 +236,7 @@ class FedDyn(FedAvg):
         }
         self.server.global_model.load_state_dict(new_parameters)
         self.h = copy.deepcopy(h)
+        
         ###下发更新客户端模型
         self.update_model()
 
