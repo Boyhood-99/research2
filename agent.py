@@ -2,11 +2,12 @@ import torch
 import numpy as np
 import os
 from env import Environment,Environment1,Environment0, Environment2
-from rl_alg import SAC, DDPG
+from rl_alg import SAC, DDPG, PPO
 from copy import deepcopy
 from configuration import ConfigTrain, ConfigDraw
 from dataclasses import dataclass
 from normalization import ZFilter
+import gym
 
 class AgentSAC():
     def __init__(self, conf, policy_lr = 3e-6, dir = './SAC') -> None:#capacity = 1000
@@ -100,7 +101,7 @@ class AgentSAC():
             s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,l, f , _, _, _, = self.env.step(self.step_num, action)
            
             s_ = self.z(s_)
-            self.agent.replay_buffer.store_transition(s_,a,r,s_,done)
+            # self.agent.replay_buffer.store_transition(s_,a,r,s_,done)
 
             ###trajectory and action
             tra_ls.append({'l_x': l[0], 'l_y' :l[1], 'l_z':l[2], 'f_x': f[0], 'f_y' :f[1], 'f_z' :f[2]})
@@ -140,7 +141,7 @@ class AgentSAC():
         print('SAC actor and critic is updated')
 class AgentDDPG(AgentSAC):
     def __init__(self, conf, lr_a = 3e-6, dir = './DDPG') -> None:
-        super().__init__(conf, lr_a, dir)         
+        super().__init__(conf, policy_lr=lr_a, dir=dir)         
         self.noise = 0.5 #0.8
         self.replacement = [dict(name = 'soft', tau = 0.001),dict(name = 'hard', rep_iter = 600)][0] 
         self.agent = DDPG(state_dim = self.s_dim, action_dim = self.a_dim, device = self.config_train.DEVICE,
@@ -162,8 +163,6 @@ class AgentDDPG(AgentSAC):
             self.noise *= 0.99
         return self.ep_reward, energy_consum
 
-        
-    
     def episode_test(self, i, global_epochs):
         return super().episode_test(i, global_epochs)
     
@@ -181,7 +180,86 @@ class AgentDDPG(AgentSAC):
         print('DDPG net is updated')
         
         
+class AgentPPO(AgentSAC):
+    def __init__(self, conf, policy_lr=0.0003, dir='./PPO') -> None:
+        super().__init__(conf, policy_lr, dir)
+        self.gym = True
+        if self.gym:
+            env_name = "Pendulum-v1"
+            self.env = gym.make(env_name)
+            self.s_dim = self.env.observation_space.shape[0]
+            self.a_dim = self.env.action_space.shape[0]
+            self.z = ZFilter(self.s_dim)
+        self.has_continuous_action_space = True
+        self.action_std_decay_rate = 0.05        
+        self.min_action_std = 0.1    
+        self.agent = PPO(state_dim = self.s_dim, action_dim = self.a_dim, 
+                         device = self.config_train.DEVICE, lr_a = policy_lr,
+                         K_epochs = 10
+                )
+        
+        
 
+    def reset(self):
+        return super().reset()
+    
+    def episode(self, i, global_epochs):
+        s = self.reset()[0]
+        # print(s)
+        if not self.gym:
+            s = self.z(s)
+        
+        energy_consum = 0 
+        acc_increase = 0
+        loss_decrease = 0
+        while True:  
+            
+            # a = self.agent.choose_action(s)   
+            a = self.choose_action(s)          
+            action = deepcopy(a)  
+            if self.gym:
+                info = self.env.step(action)  
+                s_, r, done = info[0], info[1], info[2]
+                
+            else:
+                s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,l, f , _, _, _, = self.env.step(self.step_num, action)
+                energy_consum +=   energy_consum_
+                acc_increase +=  acc_increase_
+                loss_decrease +=  loss_decrease_
+                s_ = self.z(s_)
+            self.agent.replay_buffer.rewards.append(r)
+            self.agent.replay_buffer.is_terminals.append(done)
+            
+                
+            self.step_num += 1
+            self.ep_reward +=  r
+            
+            s = s_
+            if done or self.step_num%1000 == 0:
+                break
+
+        print(f'Episode: {i}  Reward: {self.ep_reward:.4f} Step_sum:  {self.step_num}'+
+              #f'timetotal: {self.env.time_total:.2f}' +
+              f'energy_consum:{energy_consum:.2f}')
+        
+        return self.ep_reward, energy_consum
+    
+    def episode_test(self, i, global_epochs):
+        return super().episode_test(i, global_epochs)
+        
+    
+    def update(self, update_times = 200):
+        self.agent.learn()
+    
+    def save_model(self):
+        if not os.path.exists(self.dir):
+            os.makedirs(self.dir)
+        torch.save(self.agent.policy.state_dict(), self.dir + '/net_target.pth')
+        print('PPO net is updated')
+    
+    def std_decay(self, ):
+        if self.has_continuous_action_space:
+            self.agent.decay_action_std(self.action_std_decay_rate, self.min_action_std)
 
 
 #单步更新

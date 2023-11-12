@@ -71,3 +71,21 @@ class ReplayBuffer:
         return state, action, reward, next_state, done
     def __len__(self):
         return len(self.buffer)
+
+## for PPO
+class RolloutBuffer:
+    def __init__(self, ):
+        self.states = []
+        self.actions = []
+        self.logprobs = []
+        self.state_values = []
+        self.rewards = []
+        self.is_terminals = []
+    
+    def clear(self):
+        del self.states[:]
+        del self.actions[:]
+        del self.logprobs[:]
+        del self.state_values[:]
+        del self.rewards[:]
+        del self.is_terminals[:]

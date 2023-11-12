@@ -137,7 +137,7 @@ class Client(object):
         ###----------------------------------
 		
 		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=self.conf["batch_size"], 
-				      		num_workers=2, 
+				      		num_workers=1, 
 							drop_last =True,
 							pin_memory=True, 
 							sampler=DATA.sampler.SubsetRandomSampler(self.dataset_indice),

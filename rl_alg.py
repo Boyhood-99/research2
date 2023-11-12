@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import torch.nn as nn
-from buffer import ReplayBuffer
+from buffer import ReplayBuffer, RolloutBuffer
 from copy import deepcopy
 from torch.distributions import Normal
 from rl_net import *
@@ -159,7 +159,6 @@ class SAC(object,):
         self.policy_opt = torch.optim.Adam(self.actor.parameters(), lr = self.policy_lr)
 
         
-
         self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
         self.soft_plus = nn.Softplus()
 #1e-7
@@ -242,7 +241,7 @@ class SAC(object,):
         self.soft_q_opt.step()
 
         #软更新
-        self.soft_update(self.critic_target,self.critic,self.soft_tau)
+        self.soft_update(self.critic_target, self.critic,self.soft_tau)
         
         #阿尔法更新
         action, log_prob = self.evaluate(state)
@@ -266,7 +265,157 @@ class SAC(object,):
 
         return q_loss.item(),-policy_loss.item(),self.alpha_log.exp().detach().item()
 
+
+
+
+class PPO:
+    def __init__(self, state_dim, action_dim, device, hidden_dim = 128, lr_a = 1e-4, lr_c = 1e-5,
+                  gamma  = 0.99, K_epochs = 10, eps_clip = 0.2, has_continuous_action_space = True, 
+                  action_std_init=0.6, 
+                  ):
+
+        self.has_continuous_action_space = has_continuous_action_space
+        self.hidden_dim = hidden_dim
+        self.device = device
+        if has_continuous_action_space:
+            self.action_std = action_std_init
+
+        self.gamma = gamma
+        self.eps_clip = eps_clip
+        self.K_epochs = K_epochs
+        self.replay_buffer = RolloutBuffer()
+
+        self.policy = ActorCritic(state_dim, action_dim, self.hidden_dim, self.has_continuous_action_space, 
+                                    action_std_init, self.device).to(self.device)
         
+        self.policy_old = ActorCritic(state_dim, action_dim, self.hidden_dim, self.has_continuous_action_space, 
+                                      action_std_init, self.device).to(self.device)
+        self.policy_old.load_state_dict(self.policy.state_dict())
+        
+        self.optimizer = torch.optim.Adam([
+                        {'params': self.policy.actor.parameters(), 'lr': lr_a},
+                        {'params': self.policy.critic.parameters(), 'lr': lr_c}
+                    ])
+        self.MseLoss = nn.MSELoss()
+
+    def test_choose_action(self, state):
+
+        if self.has_continuous_action_space:
+            with torch.no_grad():
+                state = torch.FloatTensor(state).to(self.device)
+                action_mean = self.policy.actor(state)
+            return action_mean.tanh().detach().cpu().numpy().flatten()
+        ###
+        else:
+            raise NotImplementedError
+            with torch.no_grad():
+                state = torch.FloatTensor(state).to(self.device)
+                action_prob = self.policy.actor(state)
+                
+            return max(action_prob).item()
+    def choose_action(self, state):
+
+        if self.has_continuous_action_space:
+            with torch.no_grad():
+                state = torch.FloatTensor(state).to(self.device)
+                action, action_logprob, state_val = self.policy_old.act(state)
+
+            self.replay_buffer.states.append(state)
+            self.replay_buffer.actions.append(action)
+            self.replay_buffer.logprobs.append(action_logprob)
+            self.replay_buffer.state_values.append(state_val)
+
+            return action.detach().cpu().numpy().flatten()
+        else:
+            with torch.no_grad():
+                state = torch.FloatTensor(state).to(self.device)
+                action, action_logprob, state_val = self.policy_old.act(state)
+            
+            self.replay_buffer.states.append(state)
+            self.replay_buffer.actions.append(action)
+            self.replay_buffer.logprobs.append(action_logprob)
+            self.replay_buffer.state_values.append(state_val)
+
+            return action.item()
+
+    def learn(self, ):
+        # Monte Carlo estimate of returns
+        rewards = []
+        discounted_reward = 0
+        
+        for reward, is_terminal in zip(reversed(self.replay_buffer.rewards), reversed(self.replay_buffer.is_terminals)):
+            if is_terminal:
+                discounted_reward = 0
+            discounted_reward = reward + (self.gamma * discounted_reward)
+            rewards.insert(0, discounted_reward)
+            
+        # Normalizing the rewards
+        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
+        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
+
+        # convert list to tensor
+        old_states = torch.squeeze(torch.stack(self.replay_buffer.states, dim=0)).detach().to(self.device)
+        old_actions = torch.squeeze(torch.stack(self.replay_buffer.actions, dim=0)).detach().to(self.device)
+        old_logprobs = torch.squeeze(torch.stack(self.replay_buffer.logprobs, dim=0)).detach().to(self.device)
+        old_state_values = torch.squeeze(torch.stack(self.replay_buffer.state_values, dim=0)).detach().to(self.device)
+
+        # calculate advantages
+        
+        advantages = rewards.detach() - old_state_values.detach()
+
+        # Optimize policy for K epochs
+        for _ in range(self.K_epochs):
+
+            # Evaluating old actions and values
+            logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
+
+            # match state_values tensor dimensions with rewards tensor
+            state_values = torch.squeeze(state_values)
+            
+            # Finding the ratio (pi_theta / pi_theta__old)
+            ratios = torch.exp(logprobs - old_logprobs.detach())
+
+            # Finding Surrogate Loss  
+            surr1 = ratios * advantages
+            surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
+
+            # final loss of clipped objective PPO
+            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
+            # print(loss)
+            # take gradient step
+            self.optimizer.zero_grad()
+            loss.mean().backward()
+            self.optimizer.step()
+            
+        self.policy_old.load_state_dict(self.policy.state_dict())
+        self.replay_buffer.clear()
+    
+    def set_action_std(self, new_action_std):
+        if self.has_continuous_action_space:
+            self.action_std = new_action_std
+            self.policy.set_action_std(new_action_std)
+            self.policy_old.set_action_std(new_action_std)
+        else:
+            print("WARNING : Calling PPO::set_action_std() on discrete action space policy")
+          
+    def decay_action_std(self, action_std_decay_rate, min_action_std):
+        
+        if self.has_continuous_action_space:
+            self.action_std = self.action_std - action_std_decay_rate
+            self.action_std = round(self.action_std, 4)
+            if (self.action_std <= min_action_std):
+                self.action_std = min_action_std
+                print("setting actor output action_std to min_action_std : ", self.action_std)
+            else:
+                print("setting actor output action_std to : ", self.action_std)
+            self.set_action_std(self.action_std)
+
+        else:
+            print("WARNING : Calling PPO::decay_action_std() on discrete action space policy")
+        
+
+
+
     #SAC算法一
     '''def learn(self):
         state, action, reward, next_state, done = self.replay_buffer.sample(self.batch_size)

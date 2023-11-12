@@ -1,9 +1,10 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from torch.distributions import MultivariateNormal
+from torch.distributions import Categorical
 
-
-#DDPG network
+###DDPG network
 class Net(nn.Module):
     def __init__(self,state_dim,action_dim) :
         super(Net,self).__init__()
@@ -92,7 +93,7 @@ class Critic(nn.Module):
         return q_value
 
         
-#SAC     
+### SAC     
 
 #SAC Actor-network 
 class PolicyNetwork(nn.Module):
@@ -187,8 +188,86 @@ class CriticTwin(nn.Module):
 
         # tmp = self.net_sa(torch.cat((state, action), dim = 1))
         # return self.net_q1(tmp), self.net_q2(tmp)  # two Q values
-   
 
+### PPO
+class ActorCritic(nn.Module):
+    def __init__(self, state_dim, action_dim, hidden_size, has_continuous_action_space, action_std_init, device):
+        super(ActorCritic, self).__init__()
+        self.device = device
+        self.has_continuous_action_space = has_continuous_action_space
+        self.hidden_size = hidden_size
+        if has_continuous_action_space:
+            self.action_dim = action_dim
+            self.action_var = torch.full((action_dim,), action_std_init * action_std_init).to(self.device)
+            # print(self.action_var)
+        # actor
+        self.actor = nn.Sequential(
+                            nn.Linear(state_dim, self.hidden_size),
+                            nn.Tanh(),
+                            nn.Linear(self.hidden_size, self.hidden_size),
+                            nn.Tanh(),
+                            nn.Linear(self.hidden_size, action_dim),
+                            nn.Tanh(),
+                        )
+        if not has_continuous_action_space :
+            self.actor[-1] = nn.Softmax(dim=-1)
+
+        # critic
+        self.critic = nn.Sequential(
+                        nn.Linear(state_dim, self.hidden_size),
+                        nn.Tanh(),
+                        nn.Linear(self.hidden_size, self.hidden_size),
+                        nn.Tanh(),
+                        nn.Linear(self.hidden_size, 1)
+                    )
+        
+    def set_action_std(self, new_action_std):
+        if self.has_continuous_action_space:
+            self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(self.device)
+        else:
+            print("WARNING : Calling ActorCritic::set_action_std() on discrete action space policy")
+
+    def forward(self):
+        raise NotImplementedError
+
+    def act(self, state):
+
+        if self.has_continuous_action_space:
+            action_mean = self.actor(state)
+            cov_mat = torch.diag_embed(self.action_var)#.unsqueeze(dim=0)
+            dist = MultivariateNormal(action_mean, cov_mat)
+        else:
+            action_probs = self.actor(state)
+            dist = Categorical(action_probs)
+
+        action = dist.sample()
+        action_logprob = dist.log_prob(action)
+        state_val = self.critic(state)
+        return action.detach(), action_logprob.detach(), state_val.detach()
+    
+    def evaluate(self, state, action):
+
+        if self.has_continuous_action_space:
+            action_mean = self.actor(state)
+            
+            cov_mat = torch.diag_embed(self.action_var).to(self.device)
+            dist = MultivariateNormal(action_mean, cov_mat)
+            
+            # For Single Action Environments.
+            if self.action_dim == 1:
+                action = action.reshape(-1, self.action_dim)
+        else:
+            action_probs = self.actor(state)
+            dist = Categorical(action_probs)
+        action_logprobs = dist.log_prob(action)
+        dist_entropy = dist.entropy()
+        state_values = self.critic(state)
+        
+        return action_logprobs, state_values, dist_entropy
+
+
+
+''''''
 ###SAC 版本一网络
 #SAC Q网络,版本一  
 class SoftQNetwork(nn.Module):
@@ -230,28 +309,3 @@ class ValueNetwork(nn.Module):
         return x
 
 
-###there are some nn for rl algrithm 
-class SimpleRNN(nn.Module):
-    def __init__(self, x_size, hidden_size, n_layers, batch_size, output_size):
-        super(SimpleRNN, self).__init__()
-        self.hidden_size = hidden_size
-        self.n_layers = n_layers
-        self.batch_size = batch_size
-        #self.inp = nn.Linear(1, hidden_size) 
-        self.rnn = nn.RNN(x_size, hidden_size, n_layers, batch_first = True)
-        self.out = nn.Linear(hidden_size, output_size) # 10 in and 10 out
- 
-    def forward(self, inputs, hidden = None):
-        hidden = self.__init__hidden()
-        #print("Forward hidden {}".format(hidden.shape))
-        #print("Forward inps {}".format(inputs.shape))
-        output, hidden = self.rnn(inputs.float(), hidden.float())
-        #print("Out1 {}".format(output.shape))
-        output = self.out(output.float());
-        #print("Forward outputs {}".format(output.shape))
- 
-        return output, hidden
- 
-    def __init__hidden(self):
-        hidden = torch.zeros(self.n_layers, self.batch_size, self.hidden_size, dtype = torch.float64)
-        return hidden

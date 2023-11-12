@@ -349,7 +349,14 @@ class Environment2(Environment):
         time_begin = time.time()
         local_epochs = int(action[2])
         self.step_num += 1
-        global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, local_epochs, )
+
+        global_epoch_dic = {}
+        diff_acc = 0
+        diff_loss = 0
+        avg_local_loss = 0
+        ## add fl
+        # global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, local_epochs, )
+        
         
         self.df_list.append(global_epoch_dic)
         self.fl_time = time.time() - time_begin
@@ -466,8 +473,7 @@ class Environment2(Environment):
         
         reward = reward_settle + (- energy_consum*0.001) + acc_increase + loss_decrease + reward5
 
-        print('energy:', energy_consum )
-        print('loss_decrease:', loss_decrease)
+        # print('energy:', energy_consum, 'loss_decrease:', loss_decrease )
         # print('acc_increase', acc_increase)
 
         return self.state, reward, energy_consum, acc_increase, loss_decrease, done, \

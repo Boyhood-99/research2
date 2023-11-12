@@ -15,7 +15,8 @@ class ZFilter:
         self.rs = RunningStat(shape)
 
     def __call__(self, x, update=True):
-        if update: self.rs.push(x)
+        if update: 
+            self.rs.push(x)
         if self.demean:
             x = x - self.rs.mean
         if self.destd:
