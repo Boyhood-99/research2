@@ -269,7 +269,7 @@ class SAC(object,):
 
 
 class PPO:
-    def __init__(self, state_dim, action_dim, device, hidden_dim = 128, lr_a = 1e-4, lr_c = 1e-5,
+    def __init__(self, state_dim, action_dim, device, hidden_dim = 256, lr_a = 1e-4, lr_c = 1e-5,
                   gamma  = 0.99, K_epochs = 10, eps_clip = 0.2, has_continuous_action_space = True, 
                   action_std_init=0.6, 
                   ):
@@ -353,40 +353,34 @@ class PPO:
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
 
-        # convert list to tensor
+        
         old_states = torch.squeeze(torch.stack(self.replay_buffer.states, dim=0)).detach().to(self.device)
         old_actions = torch.squeeze(torch.stack(self.replay_buffer.actions, dim=0)).detach().to(self.device)
         old_logprobs = torch.squeeze(torch.stack(self.replay_buffer.logprobs, dim=0)).detach().to(self.device)
         old_state_values = torch.squeeze(torch.stack(self.replay_buffer.state_values, dim=0)).detach().to(self.device)
 
-        # calculate advantages
         
         advantages = rewards.detach() - old_state_values.detach()
 
         # Optimize policy for K epochs
         for _ in range(self.K_epochs):
-
-            # Evaluating old actions and values
-            logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
-
-            # match state_values tensor dimensions with rewards tensor
-            state_values = torch.squeeze(state_values)
             
-            # Finding the ratio (pi_theta / pi_theta__old)
+            logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
+            # logprobs, state_values, dist_entropy = self.policy_old.evaluate(old_states, old_actions)
+            
+            state_values = torch.squeeze(state_values)
             ratios = torch.exp(logprobs - old_logprobs.detach())
-
-            # Finding Surrogate Loss  
+            
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
 
-            # final loss of clipped objective PPO
             loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
             # print(loss)
-            # take gradient step
+        
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
-            
+        
         self.policy_old.load_state_dict(self.policy.state_dict())
         self.replay_buffer.clear()
     

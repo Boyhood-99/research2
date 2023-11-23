@@ -3,6 +3,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # np.seterr(divide='ignore', invalid='ignore')
+# ======================resnet18
+# Total params: 23,379,024
+# Trainable params: 23,379,024
+# Non-trainable params: 0
+# Params size (MB): 93.52
+# ======================resnet18
+
+# =========================res50
+# Total params: 51,114,064
+# Trainable params: 51,114,064
+# Non-trainable params: 0
+# Params size (MB): 204.46
+# =========================res50
 
 class SystemModel(object):
     def __init__(self, datasize, f_uav_num = 5):
@@ -49,9 +62,11 @@ class SystemModel(object):
         self.S_w_ = 200*1024  #上行传输数据量
         self.S_w = 2*1024*1024  #下行传输数据量
         self.S_w_ = 2*1024*1024  #上行传输数据量
-
+        self.S_w = 28*1024  #下行传输数据量
+        self.S_w_ = 28*1024  #上行传输数据量
         #计算参数
-        self.L  = 1000000                  # 训练1sample需要的CPU计算周期数
+        self.L  = 1000000   #10000               # 训练1sample需要的CPU计算周期数
+        self.L  = 10000 
         self.f_uav_f = 1 * (10 ** 9)      # 无人机的计算频率
         # self.f_uav_data = np.random.randint(800,1000,size = (self.f_uav_num,1))
         self.f_uav_data = np.array(datasize).reshape(self.f_uav_num, 1)

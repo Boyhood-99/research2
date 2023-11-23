@@ -11,8 +11,8 @@ import gym
 
 class AgentSAC():
     def __init__(self, conf, policy_lr = 3e-6, dir = './SAC') -> None:#capacity = 1000
-        np.random.seed(2023)
-        torch.manual_seed(2023)
+        # np.random.seed(2023)
+        # torch.manual_seed(2023)
         self.dir = dir
         assert isinstance(conf, dict)
         self.conf = conf
@@ -40,6 +40,16 @@ class AgentSAC():
             # self.a_dim = 3
 
         self.z = ZFilter(self.s_dim)
+        ## gym env
+        self.gym = True
+        if self.gym:
+            env_name = "Pendulum-v1"
+            env_name = 'BipedalWalker-v2'
+            env_name = 'HalfCheetah'
+            self.env = gym.make(env_name)
+            self.s_dim = self.env.observation_space.shape[0]
+            self.a_dim = self.env.action_space.shape[0]
+            self.z = ZFilter(self.s_dim)
         
         self.agent = SAC(state_dim = self.s_dim, action_dim = self.a_dim, device = self.config_train.DEVICE,
                         batch_size = self.config_train.BATCHSIZE,
@@ -52,9 +62,12 @@ class AgentSAC():
         return s
 
     def episode(self, i, global_epochs, ): 
-        s = self.reset()
-        s = self.z(s)
-        
+        if not self.gym:
+            s = self.reset()
+            s = self.z(s)
+        else:
+            s = self.reset()[0]
+
         energy_consum = 0 
         acc_increase = 0
         loss_decrease = 0
@@ -62,17 +75,22 @@ class AgentSAC():
             
             # a = self.agent.choose_action(s)   
             a = self.choose_action(s)          
-            action = deepcopy(a)          
-            s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,l, f , _, _, _, = self.env.step(self.step_num, action)
-            
-            s_ = self.z(s_)
-            self.agent.replay_buffer.store_transition(s_,a,r,s_,done)
-
+            action = deepcopy(a)      
+            if self.gym:
+                info = self.env.step(action)  
+                s_, r, done = info[0], info[1], info[2]
+                # print(s_, r) 
+            else:
+                s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,l, f , _, _, _, = self.env.step(self.step_num, action)
+                energy_consum +=   energy_consum_
+                acc_increase +=  acc_increase_
+                loss_decrease +=  loss_decrease_
+                s_ = self.z(s_)    
+            # print(action)
+            self.agent.replay_buffer.store_transition(s_, a, r, s_, done)
             self.step_num += 1
             self.ep_reward +=  r
-            energy_consum +=   energy_consum_
-            acc_increase +=  acc_increase_
-            loss_decrease +=  loss_decrease_
+
             s = s_
             if done:
                 break
@@ -95,8 +113,7 @@ class AgentSAC():
         acc_increase = 0
         loss_decrease = 0
         while True:  
-            a = self.agent.test_choose_action(s) 
-                      
+            a = self.agent.test_choose_action(s)   
             action = deepcopy(a)          
             s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,l, f , _, _, _, = self.env.step(self.step_num, action)
            
@@ -139,10 +156,12 @@ class AgentSAC():
         torch.save(self.agent.actor.state_dict(), self.dir + '/actor.pth')
         torch.save(self.agent.critic.state_dict(), self.dir + '/critic.pth')
         print('SAC actor and critic is updated')
+    def std_decay(self, ):
+        pass
 class AgentDDPG(AgentSAC):
     def __init__(self, conf, lr_a = 3e-6, dir = './DDPG') -> None:
         super().__init__(conf, policy_lr=lr_a, dir=dir)         
-        self.noise = 0.5 #0.8
+        self.noise = 0.5 # 0.5 #0.8
         self.replacement = [dict(name = 'soft', tau = 0.001),dict(name = 'hard', rep_iter = 600)][0] 
         self.agent = DDPG(state_dim = self.s_dim, action_dim = self.a_dim, device = self.config_train.DEVICE,
                           replacement = self.replacement, replay_buffer_size = self.buffer_size, 
@@ -162,7 +181,7 @@ class AgentDDPG(AgentSAC):
         if self.agent.replay_buffer.__len__() > self.warmup_capacity :
             self.noise *= 0.99
         return self.ep_reward, energy_consum
-
+    
     def episode_test(self, i, global_epochs):
         return super().episode_test(i, global_epochs)
     
@@ -183,54 +202,43 @@ class AgentDDPG(AgentSAC):
 class AgentPPO(AgentSAC):
     def __init__(self, conf, policy_lr=0.0003, dir='./PPO') -> None:
         super().__init__(conf, policy_lr, dir)
-        self.gym = True
-        if self.gym:
-            env_name = "Pendulum-v1"
-            self.env = gym.make(env_name)
-            self.s_dim = self.env.observation_space.shape[0]
-            self.a_dim = self.env.action_space.shape[0]
-            self.z = ZFilter(self.s_dim)
         self.has_continuous_action_space = True
         self.action_std_decay_rate = 0.05        
         self.min_action_std = 0.1    
         self.agent = PPO(state_dim = self.s_dim, action_dim = self.a_dim, 
                          device = self.config_train.DEVICE, lr_a = policy_lr,
-                         K_epochs = 10
+                         K_epochs = 10,
                 )
         
-        
-
     def reset(self):
         return super().reset()
     
     def episode(self, i, global_epochs):
-        s = self.reset()[0]
-        # print(s)
         if not self.gym:
+            s = self.reset()
             s = self.z(s)
-        
+        else:
+            s = self.reset()[0]
         energy_consum = 0 
         acc_increase = 0
         loss_decrease = 0
         while True:  
-            
-            # a = self.agent.choose_action(s)   
             a = self.choose_action(s)          
             action = deepcopy(a)  
             if self.gym:
                 info = self.env.step(action)  
                 s_, r, done = info[0], info[1], info[2]
-                
+                # print(s_, r) 
             else:
                 s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,l, f , _, _, _, = self.env.step(self.step_num, action)
                 energy_consum +=   energy_consum_
                 acc_increase +=  acc_increase_
                 loss_decrease +=  loss_decrease_
                 s_ = self.z(s_)
+
             self.agent.replay_buffer.rewards.append(r)
             self.agent.replay_buffer.is_terminals.append(done)
-            
-                
+                 
             self.step_num += 1
             self.ep_reward +=  r
             

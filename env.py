@@ -20,7 +20,7 @@ class Environment(object):
                 #  x_range = [-20, 2000], y_range = [-100, 100],
                  x_range = [-20, 4000], y_range = [-500, 500],
                  ):
-        # np.random.seed(0)
+        
         self.f_uav_num = f_uav_num             
         self.l_uav_num = 1
         self.f_uav_H = 140               # 无人机的飞行高度
@@ -287,8 +287,8 @@ class Environment2(Environment):
     def reset(self):
         self.df_list = []
         self.step_num = 0
-        global_epoch_dic = self.fl.reset()
-        self.df_list.append(global_epoch_dic)
+        # global_epoch_dic = self.fl.reset()
+        # self.df_list.append(global_epoch_dic)
         
         #随机初始化底层无人机位置，范围{0，1000}
         np.random.seed(1)
@@ -354,6 +354,7 @@ class Environment2(Environment):
         diff_acc = 0
         diff_loss = 0
         avg_local_loss = 0
+
         ## add fl
         # global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, local_epochs, )
         
@@ -453,7 +454,7 @@ class Environment2(Environment):
         acc_increase = diff_acc
         acc_increase = 0
         loss_decrease = -diff_loss 
-        # loss_decrease = 0
+        loss_decrease = 0
 
         reward5 = - avg_local_loss
         reward5 = 0
@@ -486,7 +487,7 @@ class Environment2(Environment):
 
 
 
-'''the below is old version, deprecated'''
+'''the following below is old version, deprecated'''
 #env1, state space based on distance, with DANE FL algorithm
 class Environment1(Environment):
 
