@@ -1,71 +1,77 @@
 import torch
 import json
 import pandas as pd
+import numpy as np
 import datetime
 from uav import *
 from torch.utils.tensorboard import SummaryWriter
-from visualization import  flvisual, rlvisual
+from visualization import  flvisual, rlvisual, tra_visual
 from configuration import ConfigDraw, ConfigTrain
-from agent import AgentSAC, AgentDDPG, AgentPPO
+from agent import AgentSAC, AgentDDPG, AgentPPO, Proposed
 import os
-
 
 writer = SummaryWriter('./tensorboard/log/')
 
-def train(conf, rl, dir):
-    # np.random.seed(2023)
-    # torch.manual_seed(2023)
+def train(conf, fl, test, rl, dir):
     if not os.path.exists(dir):
         os.makedirs(dir)
-
     date1 = datetime.datetime.now().strftime('%m-%d')
-    test = False
-    
+    beam = conf['config_train'].IS_BEAM
+    v = conf['config_train'].VEL
     rl = rl
+    ula_num = conf['config_train'].ULA_NUM
+    is_beam = conf['config_train'].IS_BEAM
     assert isinstance(rl, AgentSAC)
     return_ls = []
     ene_consum_ls = []
-    for i in range(conf['config_train'].MAX_EPISODES):
+    for epi_num in range(conf['config_train'].MAX_EPISODES):
         ##for test
-        if test and i == conf['config_train'].MAX_EPISODES - 1:
-            ep_reward, energy_consum, actions, acc_loss_test, tra_ls = rl.episode_test(i, conf['global_epochs'], )
+        if test and epi_num == conf['config_train'].MAX_EPISODES - 1:
+            ep_reward, energy_consum, actions, acc_loss_test, tra_ls = rl.episode_test(epi_num, conf['global_epochs'], )
             return_ls.append(ep_reward)
             ene_consum_ls.append(energy_consum/1000)
         else :
-            ep_reward, energy_consum = rl.episode(i, conf['global_epochs'])
+            ep_reward, energy_consum = rl.episode(epi_num, conf['global_epochs'])
             if len(return_ls) >= 1 and ep_reward > max(return_ls):
                 rl.save_model()
-            if i%5 == 0:
+            if epi_num% 20 == 0:
                 # print(len(rl.agent.replay_buffer.rewards))
                 rl.update(update_times = 200)
-            if i % 25 == 0:
+            if epi_num % 50 == 0:
                 rl.std_decay()
 
             return_ls.append(ep_reward)
             ene_consum_ls.append(energy_consum/1000)
-            print('\n')
+            # print('\n')
 
     ######保存文件
+    return_ls_mean = np.mean(return_ls[-len(return_ls)//5:])
+    return_ls.append(return_ls_mean)
+    ene_consum_ls_mean = np.mean(ene_consum_ls[-len(ene_consum_ls)//5:])
+    ene_consum_ls.append(ene_consum_ls_mean)
+    ls_return_ene = [[i ,j] for i, j in zip(return_ls, ene_consum_ls)]  
+    df_return_ene = pd.DataFrame(ls_return_ene, columns=['return', 'energy'])
+    df_return_ene.to_csv(os.path.join(dir, f'return_ene{is_beam}{ula_num}.csv'))
+    ### test
     df_fl = None
     if test:
+        if fl:
+            df_fl = pd.DataFrame(acc_loss_test)
+            df_fl.to_csv(os.path.join(dir, f'acc_loss.csv'))
         df_actions = pd.DataFrame(actions)
         df_actions.to_csv(os.path.join(dir, f'actions.csv'))
 
         df_tra = pd.DataFrame(tra_ls)
         df_tra.to_csv(os.path.join(dir, f'tra.csv'))
 
-        df_fl = pd.DataFrame(acc_loss_test)
-        df_fl.to_csv(os.path.join(dir, f'acc_loss.csv'))
-    ###
-    ls_return_ene = [[i ,j] for i, j in zip(return_ls, ene_consum_ls)]  
-    df_return_ene = pd.DataFrame(ls_return_ene, columns=['return', 'energy'])
-    df_return_ene.to_csv(os.path.join(dir, f'return_ene.csv'))
-
     return return_ls, ene_consum_ls, df_fl   
 
 if __name__ == '__main__':
 	# date = datetime.datetime.now().strftime('%H:%M:%S')
-	
+    # np.random.seed(0)
+    # torch.manual_seed(0)
+    test = True
+    fl = False
     print(torch.cuda.is_available())
     print(torch.__version__)
 
@@ -80,12 +86,19 @@ if __name__ == '__main__':
     conf["config_draw"] = config_draw 
 
     
-    # train(conf, AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
-    train(conf, AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
-    train(conf, AgentDDPG(conf, dir='./output/main_output/DDPG/'), dir='./output/main_output/DDPG/')
+    train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
+    train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
+    train(conf, fl = fl, test = test, rl = AgentDDPG(conf,  dir='./output/main_output/DDPG'), dir='./output/main_output/DDPG/')
+    train(conf, fl = fl, test = test, rl = Proposed(conf,  dir='./output/main_output/Proposed'), dir='./output/main_output/Proposed')
+
 
     if True:
-        rlvisual(patent = False)   
+        rlvisual(fl = fl, patent = False, is_beam=config_train.IS_BEAM, ula_num=config_train.ULA_NUM)   
+        tra_visual(dir='./output/main_output/PPO/')
+        tra_visual(dir='./output/main_output/SAC/')
+        tra_visual(dir='./output/main_output/DDPG/')
+        tra_visual(dir='./output/main_output/Proposed')
+
 
         
     

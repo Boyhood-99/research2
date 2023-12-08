@@ -18,8 +18,8 @@ import matplotlib.pyplot as plt
 # =========================res50
 
 class SystemModel(object):
-    def __init__(self, datasize, f_uav_num = 5):
-
+    def __init__(self, datasize, f_uav_num = 5, is_beam = True):
+        self.is_beam = is_beam
         self.f_uav_num = f_uav_num              # 底层无人机数，K
         self.f_uav_H = 140               # 无人机的飞行高度
         self.l_uav_H = 150
@@ -44,34 +44,32 @@ class SystemModel(object):
         self.M = 20
 
         self.delta = 0.7
-        # self.A_x = 2
-        # self.A_y = 2
-        # self.A_z = 2
-
         self.A_x = 3
         self.A_y = 3
         self.A_z = 3
-        # self.A_x = 5
-        # self.A_y = 5
-        # self.A_z = 5
+       
         self.G_iL = self.A_x*self.A_y*self.A_z                     #天线增益
         self.G_Li = np.zeros(shape = (self.f_uav_num,1))
 
-
-        self.S_w = 200*1024  #下行传输数据量
-        self.S_w_ = 200*1024  #上行传输数据量
-        self.S_w = 2*1024*1024  #下行传输数据量
-        self.S_w_ = 2*1024*1024  #上行传输数据量
         self.S_w = 28*1024  #下行传输数据量
         self.S_w_ = 28*1024  #上行传输数据量
-        #计算参数
+        self.L  = 10000
+
+        self.S_w = 2*1024*1024  #下行传输数据量
+        self.S_w_ = 2*1024*1024  #上行传输数据量
         self.L  = 1000000   #10000               # 训练1sample需要的CPU计算周期数
-        self.L  = 10000 
+        
+        # self.S_w = 200*1024  #下行传输数据量
+        # self.S_w_ = 200*1024  #上行传输数据量
+        # self.L  = 100000 
+        
+         
         self.f_uav_f = 1 * (10 ** 9)      # 无人机的计算频率
+        
+        #计算参数
         # self.f_uav_data = np.random.randint(800,1000,size = (self.f_uav_num,1))
         self.f_uav_data = np.array(datasize).reshape(self.f_uav_num, 1)
         
-
         self.C_T = 100
         
         #self.k = 10 ** -28              # 无人机CPU的电容系数
@@ -85,24 +83,18 @@ class SystemModel(object):
         self.rou = 1.225
         self.A = 0.5
 
-        # self.f_uav_location = np.zeros((self.f_uav_num, 2))
-
-        # #随机初始化顶层无人机位置
-        # self.l_uav_location = np.zeros(2)
-
        #model based on location
     def Distance(self, f_uav_location, l_uav_location):
-        f_uav_location = f_uav_location
-        l_uav_location = l_uav_location
+        self.f_uav_location = f_uav_location
+        self.l_uav_location = l_uav_location
         D = []
 
         for i in range(self.f_uav_num):
-            d_il = math.sqrt((f_uav_location[i][0] - l_uav_location[0]) ** 2 
-                + (f_uav_location[i][1] - l_uav_location[1])**2+(self.f_uav_H-self.l_uav_H )**2)
+            d_il = math.sqrt((self.f_uav_location[i][0] - self.l_uav_location[0]) ** 2 
+                + (self.f_uav_location[i][1] - self.l_uav_location[1])**2+(self.f_uav_location[i][2] - self.l_uav_location[2]) ** 2 )
             D.append(d_il)
         D = np.array(D).reshape(self.f_uav_num, 1)
         return D
-
 
     def Gain(self, f_uav_location, l_uav_location, alpha, d, num_episode):
         alpha = alpha
@@ -190,8 +182,9 @@ class SystemModel(object):
 
         return G, index, 
 
-    def ofdma_t_up(self, index, D, G):
-        
+    def ofdma_t_up(self, index, D, G = None):
+        if self.is_beam:
+            assert G.any() != None
         channel_SNR_up = []
         comm_rate_up = []
         t_up = []
@@ -199,24 +192,23 @@ class SystemModel(object):
         G = G
         index = index
         # episode_num = len(index)
-        # 计算每个底层无人机与顶层无人机之间的SNR
-        
+        # SNR
         for i in range(self.f_uav_num):
-            
-            SNR_up = self.p_i*self.rou_0*G[i]*self.G_iL / (self.N_B*pow(D[i],self.alpha))
+            if self.is_beam:
+                SNR_up = self.p_i*self.rou_0*G[i]*self.G_iL / (self.N_B*pow(D[i],self.alpha))
+            else:
+                SNR_up = self.p_i*self.rou_0 / (self.N_B*pow(D[i],self.alpha))
             #(self.subbandwidth*self.N_0*pow(d_il,self.alpha))
             channel_SNR_up.append(SNR_up)
-
         channel_SNR_up = np.array(channel_SNR_up).reshape(self.f_uav_num, 1)
 
-        # 计算每个底层无人机与顶层无人机之间数据的传输速率
+        # rate
         for i in range(self.f_uav_num):
             rate_up = self.M/self.f_uav_num*self.subbandwidth * math.log2(1 +channel_SNR_up[i])   #标量
             comm_rate_up.append(rate_up)
-
         comm_rate_up = np.array(comm_rate_up).reshape(self.f_uav_num, 1)
 
-        # 计算底层无人机和顶层无人机的通信时延
+        # latency
         for i in range(self.f_uav_num):
             t_up_ = self.S_w_ / comm_rate_up[i]
             t_up.append(t_up_)
@@ -226,7 +218,6 @@ class SystemModel(object):
         time_up = []
         for i in index:
             time_up.append(t_up[i])
-
 
         return time_up
     
@@ -269,22 +260,23 @@ class SystemModel(object):
 
         return t_up
 
-    def t_down(self, index, D, G):
-
+    def t_down(self, index, D, G = None):
+        if self.is_beam:
+            assert G.any() != None
         channel_SNR_down = []
         comm_rate_down = []
         t_down = []
-
         D = D
         G = G
         episode_num = len(index)
-   
+
         # SNR
         for i in range(self.f_uav_num):
-           
-            SNR_down = self.p_L*self.rou_0*G[i]*self.G_iL / (self.N_B*pow(D[i],self.alpha))
+            if self.is_beam:
+                SNR_down = self.p_L*self.rou_0*G[i]*self.G_iL / (self.N_B*pow(D[i],self.alpha))
+            else:
+                SNR_down = self.p_L*self.rou_0 / (self.N_B*pow(D[i],self.alpha))
             channel_SNR_down.append(SNR_down)
-
         channel_SNR_down = np.array(channel_SNR_down).reshape(self.f_uav_num, 1)
 
         # rate
@@ -320,10 +312,6 @@ class SystemModel(object):
 
             t_comp.append(t_comp_)
         t_comp = np.array(t_comp).reshape(episode_num, 1)
-
-        
-
-
         return t_comp
 
     def t_agg(self,F):
@@ -341,21 +329,16 @@ class SystemModel(object):
                                                                  
         return P
 
-
+##with beamforming
 class SystemModel2(SystemModel):
-    def __init__(self, datasize, f_uav_num = 5):
-        super().__init__(datasize, f_uav_num)
-    def Distance(self, f_uav_location, l_uav_location):
-        self.f_uav_location = f_uav_location
-        self.l_uav_location = l_uav_location
-        D = []
+    def __init__(self, datasize, ula_num = 3, f_uav_num = 5, is_beam = True):
+        super().__init__(datasize, f_uav_num = f_uav_num, is_beam=is_beam )
+        self.A_x = ula_num
+        self.A_y = ula_num
+        self.A_z = ula_num
 
-        for i in range(self.f_uav_num):
-            d_il = math.sqrt((self.f_uav_location[i][0] - self.l_uav_location[0]) ** 2 
-                + (self.f_uav_location[i][1] - self.l_uav_location[1])**2+(self.f_uav_location[i][2] - self.l_uav_location[2]) ** 2 )
-            D.append(d_il)
-        D = np.array(D).reshape(self.f_uav_num, 1)
-        return D
+    def Distance(self, f_uav_location, l_uav_location):
+        return super().Distance(f_uav_location, l_uav_location)
 
     def Phi(self,  f_uav_location, l_uav_location, d, ):
         

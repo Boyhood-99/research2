@@ -5,53 +5,8 @@ import pandas as pd
 import datetime
 from matplotlib.patches import ConnectionPatch
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
+from configuration import *
 
-color_dict = {
-    1: 'red',       # 红色
-    2: 'green',     # 绿色
-    3: 'blue',      # 蓝色
-    4: 'orange',    # 橙色
-    5: 'purple',    # 紫色
-    6: 'cyan',      # 青色
-    7: 'magenta',   # 洋红色
-    8: 'yellow',    # 黄色
-    9: 'black',     # 黑色
-    10: 'gray',     # 灰色
-    11: 'brown',    # 棕色
-    12: 'pink',     # 粉色
-    13: 'teal',     # 青绿色
-    14: 'indigo',   # 靛蓝色
-    15: 'lime',     # 酸橙色
-    16: 'olive',    # 橄榄色
-    17: 'gold',     # 金色
-    18: 'silver',   # 银色
-    19: 'navy',     # 海军蓝
-    20: 'maroon',   # 褐红色
-    # ... 可以继续添加更多的颜色
-}
-
-color1 = "#038355" # 孔雀绿
-color2 = "#ffc34e" # 向日黄
-color3 = "#66ce63" # 湖蓝
-color4 = "#ec661f" #橘红
-color_dic = {'1':color1, '2':color2, '3':color3, '4':color4}
-
-marker_dict = {
-    '1': 'o',      # 圆圈
-    '2': 's',      # 正方形
-    '3': '*',      # 星星
-    '4': 'v',      # 下三角形
-    '5': '>',      # 右三角形
-    '6': '<',      # 左三角形
-    '7': 'x',      # 叉叉
-    '8': '^',      # 上三角形
-    '9': '+',      # 加号
-    '10': 'D',     # 菱形
-    '11': 'p',     # 五边形
-    '12': '|',     # 竖线
-    '13': '_',     # 横线
-    # ... 可以继续添加更多的标记
-}
 
 
 font = {'family' : 'Times New Roman',
@@ -138,37 +93,41 @@ def flvisual(df, date, patent = False, diretory = f'./output/main_output/FL/'):
     fig1.savefig(os.path.join(diretory, f'{date}.eps'))
 
 
-def rlvisual(patent = True, ):
+def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_num = 3,):
     
     #####     可视化FL
-    df_fl_SAC  = pd.read_csv('./patent/SAC/acc_loss.csv')   if patent else pd.read_csv('./output/main_output/SAC/acc_loss.csv')
-    df_fl_DDPG = pd.read_csv('./patent/DDPG/acc_loss.csv')  if patent else pd.read_csv('./output/main_output/DDPG/acc_loss.csv')
+    if fl:
+        df_fl_SAC  = pd.read_csv('./patent/SAC/acc_loss.csv')   if patent else pd.read_csv('./output/main_output/SAC/acc_loss.csv')
+        df_fl_DDPG = pd.read_csv('./patent/DDPG/acc_loss.csv')  if patent else pd.read_csv('./output/main_output/DDPG/acc_loss.csv')
 
-    date = datetime.datetime.now().strftime('%m-%d')
-    df = pd.concat([df_fl_SAC[['global_accuracy', 'global_loss']], df_fl_DDPG[['global_accuracy', 'global_loss']]], axis=1,)
-    df.to_csv(f'fl.csv')
-    df.columns =  ['SAC_acc', 'SAC_loss',  'DDPG_acc', 'DDPG_loss']
-    # ['SAC', 'SAC_acc', 'SAC_loss', 'DDPG', 'DDPG_acc', 'DDPG_loss']
-    flvisual(df, date, patent = True)
+        date = datetime.datetime.now().strftime('%m-%d')
+        df = pd.concat([df_fl_SAC[['global_accuracy', 'global_loss']], df_fl_DDPG[['global_accuracy', 'global_loss']]], axis=1,)
+        df.to_csv(f'fl.csv')
+        df.columns =  ['SAC_acc', 'SAC_loss',  'DDPG_acc', 'DDPG_loss']
+        # ['SAC', 'SAC_acc', 'SAC_loss', 'DDPG', 'DDPG_acc', 'DDPG_loss']
+        flvisual(df, date, patent = True)
+
 
     ######   return和energy 可视化
-    return_ene_SAC  =  pd.read_csv('./patent/SAC/return_ene.csv') if patent else pd.read_csv('./output/main_output/SAC/return_ene.csv')
-    return_ene_DDPG = pd.read_csv('./patent/DDPG/return_ene.csv') if patent else pd.read_csv('./output/main_output/DDPG/return_ene.csv')
-    return_ene_PPO = pd.read_csv('./patent/PPO/return_ene.csv') if patent else pd.read_csv('./output/main_output/PPO/return_ene.csv')
+
+    return_ene_SAC  =  pd.read_csv('./patent/SAC/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/SAC/return_ene{is_beam}{ula_num}.csv')
+    return_ene_DDPG = pd.read_csv('./patent/DDPG/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/DDPG/return_ene{is_beam}{ula_num}.csv')
+    return_ene_PPO = pd.read_csv('./patent/PPO/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/PPO/return_ene{is_beam}{ula_num}.csv')
+    return_ene_Pro = pd.read_csv('./patent/PPO/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/Proposed/return_ene{is_beam}{ula_num}.csv')
 
     return_ls_SAC  = return_ene_SAC['return']
     return_ls_DDPG = return_ene_DDPG['return']
     return_ls_PPO  = return_ene_PPO['return']
+    return_ls_Pro  = return_ene_Pro['return']
 
     ene_consum_ls_SAC   =  return_ene_SAC['energy']
     ene_consum_ls_DDPG  =  return_ene_DDPG['energy']
     ene_consum_ls_PPO   =  return_ene_PPO['energy']
+    ene_consum_ls_Pro   =  return_ene_Pro['energy']
 
     #####
     fig1, ax1 = plt.subplots()
     
-    # plt.plot(episode_reward_sac_0, color='r', linewidth=1, linestyle='-',label='without beamforming(location)')
-    # plt.plot(episode_reward_sac_1, color='g', linewidth=1, linestyle='-',label='without beamforming(distance)')
     if patent:
         ax1.plot(return_ls_SAC,  linewidth = 1, linestyle='-',label='所提算法', )
         ax1.plot(return_ls_DDPG, linewidth = 1, linestyle='-',label='DDPG')
@@ -178,16 +137,32 @@ def rlvisual(patent = True, ):
         ax1.legend(loc = 'best', prop = {'family':'SimHei','size':14})
 
     else:
-        ax1.plot(return_ls_SAC,  linewidth = 1, linestyle='-',label='return with proposed')
-        ax1.plot(return_ls_DDPG, linewidth = 1, linestyle='-',label='return with DDPG')
-        ax1.plot(return_ls_PPO, linewidth = 1, linestyle='-',label='return with PPO')
+        if is_smooth:
+            window_size = 100
+            smoothed_DDPG = smooth([return_ls_DDPG, return_ls_DDPG, return_ls_DDPG], 19)
+            
+            ax1.plot(smoothed_DDPG, color = 'red' ,  linewidth = 1, linestyle='-',label='return with SAC')
+            # ax1.plot(smoothed_SAC, color = 'blue', linewidth = 1, linestyle='-',label='return with DDPG')
+            # ax1.plot(smoothed_PPO, color = 'green', linewidth = 1, linestyle='-',label='return with PPO')
+            # ax1.plot(smoothed_Pro, color = 'black', linewidth = 1, linestyle='-',label='return with Proposed')
+
+            ax1.plot(return_ls_DDPG, color = 'lightblue', linewidth = 1, linestyle='-',label='return with DDPG')
+            # ax1.plot(return_ls_SAC, color = 'mistyrose', linewidth = 1, linestyle='-',label='return with SAC')
+            # ax1.plot(return_ls_PPO, color = 'lightgreen', linewidth = 1, linestyle='-',label='return with PPO')
+            # ax1.plot(return_ls_Pro, color = 'gray', linewidth = 1, linestyle='-',label='return with Proposed')
+        else:
+            ax1.plot(return_ls_DDPG, color = 'blue', linewidth = 1, linestyle='-',label='return with DDPG')
+            ax1.plot(return_ls_PPO, color = 'green', linewidth = 1, linestyle='-',label='return with PPO')
+            ax1.plot(return_ls_Pro, color = 'red', linewidth = 1, linestyle='-',label='return with Proposed')
+            ax1.plot(return_ls_SAC, color = 'lime' ,  linewidth = 1, linestyle='-',label='return with SAC')
+        
         ax1.set_xlabel('Episodes')
         ax1.set_ylabel('Return')
         ax1.legend()
     
-    fig1.savefig('./output/main_output/RL/ddpg+sac_return.jpg')
-    fig1.savefig('./output/main_output/RL/ddpg+sac_return.eps')
-    fig1.savefig('./output/main_output/RL/ddpg+sac_return.pdf')
+    fig1.savefig('./output/main_output/RL/return.jpg')
+    fig1.savefig('./output/main_output/RL/return.eps')
+    fig1.savefig('./output/main_output/RL/return.pdf')
 
     ########
     fig2, ax2 = plt.subplots()
@@ -199,17 +174,61 @@ def rlvisual(patent = True, ):
         ax2.set_ylabel('能耗（千焦）', fontproperties='SimHei',)
         ax2.legend(loc = 'best', prop = {'family':'SimHei','size':14})
     else:
-        ax2.plot(ene_consum_ls_SAC,  linewidth=1, linestyle='-',label='energy consumption with proposed')
+        ax2.plot(ene_consum_ls_SAC,  linewidth=1, linestyle='-',label='energy consumption with SAC')
         ax2.plot(ene_consum_ls_DDPG, linewidth=1, linestyle='-',label='energy consumption with DDPG')
         ax2.plot(ene_consum_ls_PPO, linewidth=1, linestyle='-',label='energy consumption with PPO')
+        ax2.plot(ene_consum_ls_Pro, linewidth=1, linestyle='-',label='energy consumption with Proposed')
         ax2.set_xlabel('Episodes')
         ax2.set_ylabel('Energy consumption (kJ)')
         ax2.legend()
     
-    fig2.savefig('./output/main_output/RL/ddpg+sac_energy.jpg')
-    fig2.savefig('./output/main_output/RL/ddpg+sac_energy.eps')
-    fig2.savefig('./output/main_output/RL/ddpg+sac_energy.pdf')
+    fig2.savefig('./output/main_output/RL/energy.jpg')
+    fig2.savefig('./output/main_output/RL/energy.eps')
+    fig2.savefig('./output/main_output/RL/energy.pdf')
     
     return 
 
+def tra_visual(dir = f'./output/main_output/DDPG/'):
 
+    df = pd.read_csv(os.path.join(dir, 'tra.csv'))
+    h_uav = df['h_uav']
+    h_uav_ls = []
+    i = 0
+    while i < len(h_uav):
+        h_uav_ls.append(eval(h_uav[i]))
+        i += 1
+    h_uav_ls = list(map(list, zip(*h_uav_ls)))
+    ##l-uav
+    l_uavs = []
+    for i in range(5):
+        l_uav = df[f'l_uav{i}']
+        l_uav_ls = []
+        j = 0
+        while j < len(l_uav):           
+            l_uav_ls.append(eval(l_uav[j]))
+            j += 1
+        l_uav_ls = list(map(list, zip(*l_uav_ls)))
+        
+        l_uavs.append(l_uav_ls)
+    ### plot h_uav
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    
+    ax.plot(h_uav_ls[0], h_uav_ls[1], h_uav_ls[2], )
+    for i in range(5):
+        ax.plot(l_uavs[i][0], l_uavs[i][1], l_uavs[i][2], )
+
+    fig.savefig(os.path.join(dir, 'tra.jpg'))
+    fig.savefig(os.path.join(dir, 'tra.pdf'))
+    fig.savefig(os.path.join(dir, 'tra.eps'))
+
+
+def smooth(data, sm=1):
+    smooth_data = []
+    if sm > 1:
+        for d in data:
+            z = np.ones(len(d))
+            y = np.ones(sm)*1.0
+            d = np.convolve(y, d, "same")/np.convolve(y, z, "same")
+            smooth_data.append(d)
+    return smooth_data

@@ -13,9 +13,11 @@ from rl_net import *
 # DDPG algrithm easily converge to the action edge, cause some 
 #results wo don't want, raise zerodivision or zero value problem
 class DDPG(object):
-    def __init__(self, state_dim, action_dim,device,replay_buffer_size = NONE,replacement = NONE,
-        batch_size = 256, lr_a = 1e-4, lr_c = 1e-5,
-        net_target = NONE, tau = 0.005, gamma = 0.99,
+    def __init__(self, state_dim, action_dim, device = None, 
+                 replay_buffer_size = NONE,replacement = NONE,
+                batch_size = 256, lr_a = 1e-4, lr_c = 1e-5,
+                net_target = NONE, tau = 0.005, gamma = 0.99,
+                hidden_dim = 128,
         ) :
 
         # super(DDPG, self).__init__()
@@ -43,7 +45,7 @@ class DDPG(object):
         # # 定义 Critic 网络
         # self.critic = Critic(state_dim,action_dim)
         # self.critic_target = Critic(state_dim,action_dim)
-        self.net = Net(self.state_dim,self.action_dim).cuda()
+        self.net = Net(self.state_dim, self.action_dim, hidden_dim = hidden_dim).cuda()
         self.net_target = deepcopy(self.net).cuda() if net_target == NONE else net_target.cuda()
 
         # 定义优化器
@@ -57,7 +59,7 @@ class DDPG(object):
         # s = np.reshape(s,(1,8*10))
         s = torch.FloatTensor(s).cuda('cuda:0')
         action = self.net.actor(s)     
-        return action.cpu().detach().numpy()
+        return action #.cpu().detach().numpy()
     def test_choose_action(self,s):
         s = torch.FloatTensor(s).cuda('cuda:0')
         action = self.net_target.actor(s)     
@@ -75,12 +77,11 @@ class DDPG(object):
         br     = torch.FloatTensor(br).unsqueeze(1).to(self.device)
         bs_ = torch.FloatTensor(bs_).to(self.device)
         bd      = torch.FloatTensor(np.float32(bd)).unsqueeze(1).to(self.device)
-        
-
-        
+         
         # 训练Actor
         a = self.net.actor(bs)
-        q = self.net.critic(bs, a)
+        x = torch.cat([bs,a], 1)
+        q = self.net.critic(x)
         a_loss = -torch.mean(q)
        
         self.aopt.zero_grad()
@@ -90,9 +91,10 @@ class DDPG(object):
         # 训练critic
         #compute the target Q value using the information of next state
         a_ = self.net_target.actor(bs_)
-        q_ = self.net_target.critic(bs_, a_)
+        x_ = torch.cat([bs_,a_], 1)
+        q_ = self.net_target.critic(x_)
         q_target = br + (1-bd)*self.gamma * q_
-        q_eval = self.net.critic(bs, ba)
+        q_eval = self.net.critic(torch.cat([bs,ba], 1))
         
         td_error = self.mse_loss(q_target,q_eval)
         
@@ -102,13 +104,13 @@ class DDPG(object):
         self.copt.step()
         
 
-        self.soft_update(self.net_target,self.net,self.tau)
+        self.soft_update(self.net_target, self.net,self.tau)
         return a_loss,td_error
 
 class SAC(object,):
     def __init__(self,state_dim, action_dim,device,batch_size = 256,replay_buffer_size = NONE,
                 soft_tau = 0.005,soft_q_lr = 1e-5,policy_lr = 1e-4,gamma = 0.99,actor = NONE,
-                hidden_dim = 128,hidden_dim2 = 64,hidden_dim3 = 34,
+                hidden_dim = 128,hidden_dim2 = 64,hidden_dim3 = 64,
                 #hidden_dim = 256,hidden_dim2 = 128,hidden_dim3 = 128
                 ):#1e-2):
 #增加节点数有时候可以使网络训练更快
@@ -266,10 +268,8 @@ class SAC(object,):
         return q_loss.item(),-policy_loss.item(),self.alpha_log.exp().detach().item()
 
 
-
-
 class PPO:
-    def __init__(self, state_dim, action_dim, device, hidden_dim = 256, lr_a = 1e-4, lr_c = 1e-5,
+    def __init__(self, state_dim, action_dim, device, hidden_dim = 128, lr_a = 1e-4, lr_c = 1e-5,
                   gamma  = 0.99, K_epochs = 10, eps_clip = 0.2, has_continuous_action_space = True, 
                   action_std_init=0.6, 
                   ):

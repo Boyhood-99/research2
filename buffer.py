@@ -7,7 +7,6 @@ import numpy as np
 import numpy.random as rd
 from torch import Tensor
 
-
 class BufferArray:  
     def __init__(self, memo_max_len, state_dim, action_dim, ):
         memo_dim = 1 + 1 + state_dim + action_dim + state_dim
@@ -52,7 +51,7 @@ class BufferArray:
         )
         return tensors
 
-
+## for SAC and DDPG
 class ReplayBuffer:
     def __init__(self, capacity):
         self.capacity = capacity
