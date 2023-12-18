@@ -32,7 +32,6 @@ class Net(nn.Module):
         )
     
 ### SAC     
-
 #SAC Actor-network 
 class PolicyNetwork(nn.Module):
     def __init__(self, state_dim, actions_dim, hidden_size,hidden_size2, hidden_size3, init_w = 3e-3, log_std_min = -20, log_std_max = 2):
@@ -144,16 +143,17 @@ class ActorCritic(nn.Module):
             self.action_var = torch.full((action_dim,), action_std_init * action_std_init).to(self.device)
             # print(self.action_var)
         # actor
-        self.actor = nn.Sequential(
-                            nn.Linear(state_dim, self.hidden_size*2),
-                            # nn.Tanh(),
-                            nn.ReLU(),
-                            nn.Linear(self.hidden_size*2, self.hidden_size),
-                            # nn.Tanh(),
-                            nn.ReLU(),
-                            nn.Linear(self.hidden_size, action_dim),
-                            nn.Tanh(),
-                        )
+        self.actor = PolicyNetwork(state_dim, action_dim, self.hidden_size*2, self.hidden_size, self.hidden_size).to(device)
+        # self.actor = nn.Sequential(
+        #                     nn.Linear(state_dim, self.hidden_size*2),
+        #                     # nn.Tanh(),
+        #                     nn.ReLU(),
+        #                     nn.Linear(self.hidden_size*2, self.hidden_size),
+        #                     # nn.Tanh(),
+        #                     nn.ReLU(),
+        #                     nn.Linear(self.hidden_size, action_dim),
+        #                     nn.Tanh(),
+        #                 )
         if not has_continuous_action_space :
             self.actor[-1] = nn.Softmax(dim=-1)
 
@@ -167,17 +167,41 @@ class ActorCritic(nn.Module):
                         nn.ReLU(),
                         nn.Linear(self.hidden_size, 1)
                     )
-        
-    def set_action_std(self, new_action_std):
-        if self.has_continuous_action_space:
-            self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(self.device)
-        else:
-            print("WARNING : Calling ActorCritic::set_action_std() on discrete action space policy")
-
-    def forward(self):
-        raise NotImplementedError
 
     def act(self, state):
+        if self.has_continuous_action_space:
+            action_mean, log_std = self.actor(state)
+            std = log_std.exp()
+            # print(std)
+            # action = torch.normal(action_mean, std).tanh()
+            cov_mat = torch.diag_embed(std)#.unsqueeze(dim=0)
+            dist = MultivariateNormal(action_mean, cov_mat)
+            action = dist.sample()
+        else:
+            action_probs = self.actor(state)
+            dist = Categorical(action_probs)
+            action = dist.sample()
+        action_logprob = dist.log_prob(action)
+        state_val = self.critic(state)
+        return action.detach(), action_logprob.detach(), state_val.detach()
+    def evaluate(self, state, action):
+
+        if self.has_continuous_action_space:
+            action_mean, log_std = self.actor(state)
+            std = log_std.exp()
+            cov_mat = torch.diag_embed(std).to(self.device)
+            dist = MultivariateNormal(action_mean, cov_mat)
+            # For Single Action Environments.
+            if self.action_dim == 1:
+                action = action.reshape(-1, self.action_dim) 
+        else:
+            action_probs = self.actor(state)
+            dist = Categorical(action_probs)
+        action_logprobs = dist.log_prob(action)
+        dist_entropy = dist.entropy()
+        state_values = self.critic(state)
+        return action_logprobs, state_values, dist_entropy
+    def act_(self, state):
 
         if self.has_continuous_action_space:
             action_mean = self.actor(state)
@@ -191,8 +215,7 @@ class ActorCritic(nn.Module):
         action_logprob = dist.log_prob(action)
         state_val = self.critic(state)
         return action.detach(), action_logprob.detach(), state_val.detach()
-    
-    def evaluate(self, state, action):
+    def evaluate_(self, state, action):
 
         if self.has_continuous_action_space:
             action_mean = self.actor(state)
@@ -211,7 +234,14 @@ class ActorCritic(nn.Module):
         state_values = self.critic(state)
         
         return action_logprobs, state_values, dist_entropy
+    def set_action_std(self, new_action_std):
+        if self.has_continuous_action_space:
+            self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(self.device)
+        else:
+            print("WARNING : Calling ActorCritic::set_action_std() on discrete action space policy")
 
+    def forward(self):
+        raise NotImplementedError
 
 
 ''''''

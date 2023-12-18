@@ -76,6 +76,7 @@ class RolloutBuffer:
     def __init__(self, ):
         self.states = []
         self.actions = []
+        self.actions_clip = []
         self.logprobs = []
         self.state_values = []
         self.rewards = []
@@ -84,6 +85,7 @@ class RolloutBuffer:
     def clear(self):
         del self.states[:]
         del self.actions[:]
+        del self.actions_clip[:]
         del self.logprobs[:]
         del self.state_values[:]
         del self.rewards[:]

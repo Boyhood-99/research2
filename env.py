@@ -15,12 +15,14 @@ for performance comparison
 #state space based on location, state excludes new phi parameter
 class Environment(object):
     #x_range = [-20, 2000], y_range = [-100, 100]
-    def __init__(self, f_uav_num = 5, epsilon = 0.001, end_reward = 0, time_max = 80, 
+    def __init__(self, conf, f_uav_num = 5, epsilon = 0.001, end_reward = 0, time_max = 80, 
                 #  x_range = [-20, 2000], y_range = [-100, 100],
-                 x_range = [-20, 4000], y_range = [-500, 500],
+                #  x_range = [-20, 1000], y_range = [-500, 500],
+                #  x_range = [-20, 4000], y_range = [-500, 500],
+                 x_range = [-20, 1000], y_range = [-200, 200],
                  ):
-        
-        self.f_uav_num = f_uav_num             
+        self.conf = conf
+        self.f_uav_num = self.conf['config_train'].UAV_NUM
         self.l_uav_num = 1
         self.f_uav_H = 140               # 无人机的飞行高度
         self.l_uav_H = 150
@@ -104,6 +106,7 @@ class Environment(object):
         self.local_accuracy_sum = np.zeros(1)
         self.time_total = 0
         self.state = np.hstack((self.f_uav_location.reshape(self.f_uav_num*2, ), self.l_uav_location, self.time_total, self.local_accuracy_sum))
+
 
         return self.state
 
@@ -241,10 +244,11 @@ class Environment(object):
 #state space based on location, state includes new phi parameter
 class Environment2(Environment):
     def __init__(self, conf, ):
-        super().__init__()
+        super().__init__(conf=conf)
         self.conf = conf
         assert isinstance(self.conf['config_train'], ConfigTrain)
         self.is_beam = self.conf['config_train'].IS_BEAM
+        self.is_norm_man = self.conf['config_train'].IS_NORM_MAN
         # self.dataset = Dataset(self.conf)
         self.fl = FedAvg(conf = self.conf, dir_alpha=0.3)
         # self.fl = FedDyn(conf = self.conf, dir_alpha=0.3)
@@ -306,12 +310,24 @@ class Environment2(Environment):
             self.state = np.hstack((self.f_uav_location.reshape(self.f_uav_num*3, ),init_phi.reshape(self.f_uav_num*3, ), self.l_uav_location, 
                                     # self.time_total, self.local_accuracy_sum, 
                                     ))
-            return self.state
+            
         else:
             self.state = np.hstack((self.f_uav_location.reshape(self.f_uav_num*3, ), self.l_uav_location, 
                                     # self.time_total, self.local_accuracy_sum, 
                                     ))
-            return self.state
+        state = deepcopy(self.state).reshape(self.state.size)
+        if self.is_norm_man:
+            for i in range(3*self.f_uav_num):
+                if i%3 == 2:
+                    state[i] /= self.f_uav_H
+                elif i%3 == 1:
+                    state[i] /= self.y_range[1]
+                else:
+                    state[i] == state[i]/self.x_range[1]
+            state[-1] /= self.l_uav_H
+            state[-2] /= self.y_range[1]
+            state[-3] /= self.x_range[1]
+        return state
     def step(self, step_num, action):
         
         state = self.state
@@ -369,7 +385,7 @@ class Environment2(Environment):
             t_up_ = self.systemmodel.ofdma_t_up(index, distance, )
             t_comp = self.systemmodel.t_comp(index, action[2])
             t_agg = self.systemmodel.t_agg(self.t_uav_f)
-            
+        uav_num = len(index)
         #此处无人机飞行时间为当前状态下，底层无人机计算时间(与本次决策相关)和上下行传输时间(只与当前位置有关)
         fly_time = np.max(t_comp + t_down_ + t_up_) #+ t_agg
         next_time_total = time_total + fly_time
@@ -453,7 +469,21 @@ class Environment2(Environment):
         # print('energy:', energy_consum, 'loss_decrease:', loss_decrease )
         # print('acc_increase', acc_increase)
 
-        return self.state, reward, energy_consum, acc_increase, loss_decrease, done, \
+        ##
+        state = deepcopy(self.state)
+        if self.is_norm_man:
+            for i in range(3*self.f_uav_num):
+                if i%3 == 2:
+                    state[i] /= self.f_uav_H
+                elif i%3 == 1:
+                    state[i] /= self.y_range[1]
+                else:
+                    state[i] == state[i]/self.x_range[1]
+            state[-1] /= self.l_uav_H
+            state[-2] /= self.y_range[1]
+            state[-3] /= self.x_range[1]
+
+        return state, reward, energy_consum, acc_increase, loss_decrease, done, uav_num, \
             l, f, d, np.max(t_up_ + t_down_), np.max(t_comp + t_up_ + t_down_)
     
     def get_dflist(self, ):

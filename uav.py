@@ -118,13 +118,11 @@ class Client(object):
 
 		if compile:
 			self.local_model = torch.compile(self.local_model)
-
 		self.client_id = id
 		
 		self.train_dataset = train_dataset
 
 		####------------------------------------
-		#自定义样本数量
 		# self.num_sample = np.random.randint(800,1000)
 		# self.ls = list(np.random.choice(dataset_indice, self.num_sample, replace=False))
 		
@@ -135,7 +133,6 @@ class Client(object):
 		# 					)
             
         ###----------------------------------
-		
 		self.train_loader = DATA.DataLoader(self.train_dataset, batch_size=self.conf["batch_size"], 
 				      		num_workers=1, 
 							drop_last =True,
@@ -171,6 +168,7 @@ class Client(object):
 		# self.criterion = FocalLoss()
 
 		self.prev_grads = self.init_prev_grads()
+		
 		######可视化数据
 		print(f'client {self.client_id}   dataset_size:{len(dataset_indice)}')
 		# print(f'dataset_indice:{dataset_indice}')
@@ -190,7 +188,6 @@ class Client(object):
 		
 		self.local_model.train()
 		loss_dic = {}
-		# for local_epoch in range(self.conf["local_epochs"]):
 		for local_epoch in range(local_epochs):
 			
 			for batch_id, batch in enumerate(self.train_loader):
@@ -212,6 +209,7 @@ class Client(object):
 					for w, w_t in zip(self.local_model.parameters(), global_model.parameters()):
 						proximal_term += (w - w_t).norm(2)
 					loss = loss + (self.conf['mu'] / 2) * proximal_term
+				### for FedDecorr
 				if self.feddecorr:
 					loss_feddecorr = feddecorr(feature)
 					loss = loss + self.feddecorr_coef * loss_feddecorr
@@ -219,8 +217,6 @@ class Client(object):
 				#反向传播
 				loss.backward()
 				self.optimizer.step()
-				
-			# print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")
 			
 			loss_dic[f'local epoch{local_epoch} loss'] = loss.item()
 		

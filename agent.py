@@ -38,6 +38,7 @@ class AgentSAC():
 
         self.z = ZFilter(self.s_dim)
         ## gym env
+        self.is_norm_man = self.config_train.IS_NORM_MAN
         if self.gym:
             env_name = "Pendulum-v1"
             env_name = 'BipedalWalker-v2'
@@ -53,8 +54,8 @@ class AgentSAC():
                         device = self.config_train.DEVICE,
                         batch_size = self.config_train.BATCHSIZE,
                         replay_buffer_size = self.buffer_size, 
-                        hidden_dim  = self.config_train.hidden_dim,
-                        hidden_dim2 = self.config_train.hidden_dim*2, 
+                        hidden_dim  = self.config_train.hidden_dim*2,
+                        hidden_dim2 = self.config_train.hidden_dim, 
                         hidden_dim3 = self.config_train.hidden_dim,
                         )
 
@@ -67,7 +68,8 @@ class AgentSAC():
     def episode(self, i, global_epochs, ): 
         if not self.gym:
             s = self.reset()
-            s = self.z(s)
+            if not self.is_norm_man:
+                s = self.z(s)
         else:
             s = self.reset()[0]
 
@@ -75,22 +77,20 @@ class AgentSAC():
         acc_increase = 0
         loss_decrease = 0
         while True:  
-            
-            # a = self.agent.choose_action(s)   
+             # a = self.agent.choose_action(s)   
             a = self.choose_action(s)  
-
             action = deepcopy(a)      
             if self.gym:
                 info = self.env.step(action)  
                 s_, r, done = info[0], info[1], info[2]
-                # print(s_, r) 
             else:
-                s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,l, f , _, _, _, = self.env.step(self.step_num, action)
+                s_, r, energy_consum_, acc_increase_, loss_decrease_, done, uav_num, l, f , _, _, _, = self.env.step(self.step_num, action)
                 energy_consum +=   energy_consum_
                 acc_increase +=  acc_increase_
                 loss_decrease +=  loss_decrease_
-                s_ = self.z(s_)    
-            # print(action)
+                if not self.is_norm_man:
+                    s_ = self.z(s_)    
+                    
             self.agent.replay_buffer.store_transition(s_, a, r, s_, done)
             self.step_num += 1
             self.ep_reward +=  r
@@ -117,7 +117,8 @@ class AgentSAC():
        
     def episode_test(self, epi_num, global_epochs,):
         s = self.reset()
-        s = self.z(s)
+        if not self.is_norm_man:
+            s = self.z(s)
         actions = []
         tra_ls = []
         
@@ -125,17 +126,15 @@ class AgentSAC():
         acc_increase = 0
         loss_decrease = 0
         while True:  
-
             a = self.agent.test_choose_action(s) 
             if self.is_con_vel:
                 a[0] = self.vel
             if self.is_con_dir:
                 a[1] = 0 
             action = deepcopy(a)          
-            s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,l, f , _, _, _, = self.env.step(self.step_num, action)
-           
-            s_ = self.z(s_)
-            # self.agent.replay_buffer.store_transition(s_,a,r,s_,done)
+            s_, r, energy_consum_, acc_increase_, loss_decrease_, done, uav_num, l, f , _, _, _, = self.env.step(self.step_num, action)
+            if not self.is_norm_man:
+                s_ = self.z(s_)  
 
             ###trajectory
             tra_dic = {}
@@ -148,6 +147,7 @@ class AgentSAC():
             action_dic['velocity'] = action[0]
             action_dic['direction'] = action[1]
             action_dic['iteration'] = action[2]
+            action_dic['uav_num'] = uav_num
             if self.a_dim > 3:
                 action_dic['alpha']  = action[3:]
             actions.append(action_dic)
@@ -235,12 +235,13 @@ class AgentPPO(AgentSAC):
         super().__init__(conf, dir = dir)
         self.has_continuous_action_space = True
         self.action_std_decay_rate = 0.05        
-        self.min_action_std = 0.1    
+        self.min_action_std = 0.01    
         self.agent = PPO(state_dim = self.s_dim, action_dim = self.a_dim, 
                          hidden_dim = self.config_train.hidden_dim,
                          device = self.config_train.DEVICE, 
                          lr_a = self.lr_a, lr_c = self.lr_c,
-                         K_epochs = 20,
+                         K_epochs = 20,#20,
+                         action_std_init=0.6,
                 )
         
     def reset(self):
@@ -249,7 +250,8 @@ class AgentPPO(AgentSAC):
     def episode(self, i, global_epochs):
         if not self.gym:
             s = self.reset()
-            s = self.z(s)
+            if not self.is_norm_man:
+                s = self.z(s)
         else:
             s = self.reset()[0]
         energy_consum = 0 
@@ -263,11 +265,12 @@ class AgentPPO(AgentSAC):
                 s_, r, done = info[0], info[1], info[2]
                 # print(s_, r) 
             else:
-                s_, r, energy_consum_, acc_increase_, loss_decrease_, done ,l, f , _, _, _, = self.env.step(self.step_num, action)
+                s_, r, energy_consum_, acc_increase_, loss_decrease_, done, uav_num, l, f , _, _, _, = self.env.step(self.step_num, action)
                 energy_consum +=   energy_consum_
                 acc_increase +=  acc_increase_
                 loss_decrease +=  loss_decrease_
-                s_ = self.z(s_)
+                if not self.is_norm_man:
+                    s_ = self.z(s_) 
 
             self.agent.replay_buffer.rewards.append(r)
             self.agent.replay_buffer.is_terminals.append(done)

@@ -62,7 +62,7 @@ class Dataset(object):
         return train_dataset, eval_dataset
     
     def get_indice(self, dir_alpha):
-        num_clients = self.conf['f_uav_num']
+        num_clients = self.conf['config_train'].UAV_NUM
         num_samples = len(self.train_dataset)
         print(num_samples)
         

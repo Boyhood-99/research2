@@ -28,10 +28,13 @@ class ConfigTrain:
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     MAX_EPISODES = 500#500#1000
     BATCHSIZE = 256 ##256
-
+    
+    UAV_NUM = 5
+    CONDIDATE = list(range(UAV_NUM))
+    IS_NORM_MAN = False
 
     ###should larger than batchsize 
-    WARM_UP = 500 #500 #1000
+    WARM_UP = 2000 #500 #1000
     BUFFER_SIZE = 8000#8000 #15000
     ###  beamforming
     IS_BEAM = True
@@ -41,11 +44,14 @@ class ConfigTrain:
     IS_CON_DIR = False
     VEL = -1
     ## net para
-    hidden_dim = 128
-    lr_a = 3e-4
-    lr_c = 1e-3
+    hidden_dim = 128 #32,64,
+    lr_a = 3e-4#3e-4
+    lr_c = 1e-3#1e-3
     #DDPG
     NOISE = 0.5
+
+
+'''[20,30],[5,40],100000,200k'''
 '''没有波束，速度10，方向0，0.83'''
 '''没有波束，速度5，方向0，0.821'''
 '''没有波束，速度自适应，方向0，0.870'''

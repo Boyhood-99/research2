@@ -29,7 +29,6 @@ class ZFilter:
         return input_space.shape
 
 
-
 class RunningStat(object):
     def __init__(self, shape):
         self._n = 0

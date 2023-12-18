@@ -14,7 +14,7 @@ font = {'family' : 'Times New Roman',
 plt.rc('font', **font)
 
 
-def data_dis_visual(df_list, flag = None, diretory = f'./output/data_output/'):
+def data_dis_visual(df_list, patent = True, flag = None, diretory = f'./output/data_output/'):
     # df = pd.read_csv('./log07-05.csv')
     len_ = len(df_list[0][0])
     fig1, ax1 = plt.subplots()
@@ -35,6 +35,13 @@ def data_dis_visual(df_list, flag = None, diretory = f'./output/data_output/'):
     ax2.set_ylabel('Loss')
     ax2.set_xticks(list(range(len_)))
     ax2.legend()
+
+    if patent:
+        ax1.set_xlabel('全局轮次', fontproperties = 'SimHei')
+        ax1.set_ylabel('准确度', fontproperties = 'SimHei')
+        ax2.set_xlabel('全局轮次', fontproperties = 'SimHei')
+        ax2.set_ylabel('损失', fontproperties = 'SimHei')
+
     if not os.path.exists(diretory):
         os.makedirs(diretory)  
     fig1.savefig(os.path.join(diretory, 'acc_.png'))
@@ -46,7 +53,7 @@ def data_dis_visual(df_list, flag = None, diretory = f'./output/data_output/'):
     fig2.savefig(os.path.join(diretory, 'loss_.eps'))
 
 
-def flvisual(df, date, patent = False, diretory = f'./output/main_output/FL/'):
+def flvisual(df, date = None, patent = False, diretory = f'./output/main_output/FL'):
     if not os.path.exists(diretory):
         os.makedirs(diretory)
     # df = pd.read_csv('./log07-05.csv')
@@ -151,10 +158,10 @@ def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_n
             # ax1.plot(return_ls_PPO, color = 'lightgreen', linewidth = 1, linestyle='-',label='return with PPO')
             # ax1.plot(return_ls_Pro, color = 'gray', linewidth = 1, linestyle='-',label='return with Proposed')
         else:
-            ax1.plot(return_ls_DDPG, color = 'blue', linewidth = 1, linestyle='-',label='return with DDPG')
+            # ax1.plot(return_ls_DDPG, color = 'blue', linewidth = 1, linestyle='-',label='return with DDPG')
             ax1.plot(return_ls_PPO, color = 'green', linewidth = 1, linestyle='-',label='return with PPO')
-            ax1.plot(return_ls_Pro, color = 'red', linewidth = 1, linestyle='-',label='return with Proposed')
-            ax1.plot(return_ls_SAC, color = 'lime' ,  linewidth = 1, linestyle='-',label='return with SAC')
+            ax1.plot(return_ls_Pro, color = 'red', linewidth = 1, linestyle='-',label='return with DDPG')
+            ax1.plot(return_ls_SAC, color = 'lime' ,  linewidth = 1, linestyle='-',label='return with Proposed')
         
         ax1.set_xlabel('Episodes')
         ax1.set_ylabel('Return')
@@ -169,19 +176,20 @@ def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_n
     if patent:
         ax2.plot(ene_consum_ls_SAC,  linewidth=1, linestyle='-',label='所提算法')
         ax2.plot(ene_consum_ls_DDPG, linewidth=1, linestyle='-',label='DDPG')
-        ax2.plot(ene_consum_ls_PPO, linewidth=1, linestyle='-',label='PPO')
+        ax2.plot(ene_consum_ls_PPO,  linewidth=1, linestyle='-',label='PPO')
         ax2.set_xlabel('回合', fontproperties='SimHei',)
         ax2.set_ylabel('能耗（千焦）', fontproperties='SimHei',)
         ax2.legend(loc = 'best', prop = {'family':'SimHei','size':14})
     else:
-        ax2.plot(ene_consum_ls_SAC,  linewidth=1, linestyle='-',label='energy consumption with SAC')
-        ax2.plot(ene_consum_ls_DDPG, linewidth=1, linestyle='-',label='energy consumption with DDPG')
-        ax2.plot(ene_consum_ls_PPO, linewidth=1, linestyle='-',label='energy consumption with PPO')
-        ax2.plot(ene_consum_ls_Pro, linewidth=1, linestyle='-',label='energy consumption with Proposed')
+        
+        # ax2.plot(ene_consum_ls_DDPG, linewidth=1, linestyle='-',label='energy consumption with DDPG')
+        ax2.plot(ene_consum_ls_PPO, color = 'green', linewidth=1, linestyle='-',label='energy consumption with PPO')
+        ax2.plot(ene_consum_ls_Pro, color = 'red',  linewidth=1, linestyle='-',label='energy consumption with DDPG')
+        ax2.plot(ene_consum_ls_SAC, color = 'lime',  linewidth=1, linestyle='-',label='energy consumption with Proposed')
         ax2.set_xlabel('Episodes')
         ax2.set_ylabel('Energy consumption (kJ)')
         ax2.legend()
-    
+        ax2.set_title()
     fig2.savefig('./output/main_output/RL/energy.jpg')
     fig2.savefig('./output/main_output/RL/energy.eps')
     fig2.savefig('./output/main_output/RL/energy.pdf')
@@ -211,12 +219,20 @@ def tra_visual(dir = f'./output/main_output/DDPG/'):
         
         l_uavs.append(l_uav_ls)
     ### plot h_uav
-    fig = plt.figure()
+    fig = plt.figure(figsize=(5,5))
+    fig = plt.figure(dpi = 200)
     ax = fig.add_subplot(projection='3d')
     
-    ax.plot(h_uav_ls[0], h_uav_ls[1], h_uav_ls[2], )
+    ax.plot(h_uav_ls[0], h_uav_ls[1], h_uav_ls[2], marker=marker_dict['1'], markersize=2, label = 'The trajectory of H-UAV')
     for i in range(5):
         ax.plot(l_uavs[i][0], l_uavs[i][1], l_uavs[i][2], )
+
+    ax.legend()
+    ax.set_title('The trajectory of H-UAV and L-UAVs')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+        
 
     fig.savefig(os.path.join(dir, 'tra.jpg'))
     fig.savefig(os.path.join(dir, 'tra.pdf'))

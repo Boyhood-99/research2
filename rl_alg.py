@@ -140,12 +140,12 @@ class SAC(object,):
         # self.value_net        = ValueNetwork(self.state_dim, self.hidden_dim).to(device)
         # self.target_value_net = ValueNetwork(self.state_dim, self.hidden_dim).to(device)
 
-        self.actor = PolicyNetwork(self.state_dim, self.action_dim, self.hidden_dim,self.hidden_dim2,self.hidden_dim3).to(device)\
+        self.actor = PolicyNetwork(self.state_dim, self.action_dim, self.hidden_dim, self.hidden_dim2, self.hidden_dim3).to(device)\
             if actor == NONE else actor.to(device)
         
 
         # self.critic = SoftQNetwork(self.state_dim, self.action_dim, self.hidden_dim).to(device)
-        self.critic = CriticTwin(self.state_dim, self.action_dim,self.hidden_dim,self.hidden_dim2, self.hidden_dim3).to(device)
+        self.critic = CriticTwin(self.state_dim, self.action_dim, self.hidden_dim,self.hidden_dim2, self.hidden_dim3).to(device)
         
         self.critic_target = deepcopy(self.critic).to(device)
 
@@ -163,7 +163,7 @@ class SAC(object,):
         
         self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
         self.soft_plus = nn.Softplus()
-#1e-7
+        #1e-7
         self.alpha_log = torch.tensor(
             (np.log(0),), dtype = torch.float32, requires_grad = True, device = self.device)  # trainable parameter
         self.alpha_optim = torch.optim.Adam((self.alpha_log,), lr = 0.00001)#0.0001)
@@ -184,17 +184,13 @@ class SAC(object,):
         
          # log_prob = torch.mean(Normal(mean, std).log_prob(mean+ std*z.to(self.device)) - torch.log(1 - action.pow(2) + epsilon),dim = 1,keepdim = True)
        
-        
         return  a_noise.tanh(), log_prob.sum(1, keepdim = True)
         
     def choose_action(self, state):
         state = state.astype(float)
         state = torch.FloatTensor(state).to(self.device)
-       
         mean, log_std = self.actor(state)
-        
         std = log_std.exp()
-        
         action = torch.normal(mean, std).tanh()
         action  = action.detach().cpu().numpy()
 
@@ -204,6 +200,7 @@ class SAC(object,):
         state = torch.FloatTensor(state).to(self.device)
         mean, log_std = self.actor(state) 
         mean = mean.tanh()  
+        print(log_std.exp())
         return mean.detach().cpu().numpy()
 
     def soft_update(self,target_net, current_net, tau):
@@ -270,7 +267,7 @@ class SAC(object,):
 
 class PPO:
     def __init__(self, state_dim, action_dim, device, hidden_dim = 128, lr_a = 1e-4, lr_c = 1e-5,
-                  gamma  = 0.99, K_epochs = 10, eps_clip = 0.2, has_continuous_action_space = True, 
+                  gamma  = 0.99, K_epochs = 10, eps_clip = 0.1, has_continuous_action_space = True, 
                   action_std_init=0.6, 
                   ):
 
@@ -303,15 +300,13 @@ class PPO:
         if self.has_continuous_action_space:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
-                action_mean = self.policy.actor(state)
+                action_mean, log_std = self.policy.actor(state)
             return action_mean.tanh().detach().cpu().numpy().flatten()
         ###
         else:
-            raise NotImplementedError
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
                 action_prob = self.policy.actor(state)
-                
             return max(action_prob).item()
     def choose_action(self, state):
 
@@ -319,13 +314,14 @@ class PPO:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
                 action, action_logprob, state_val = self.policy_old.act(state)
-
+            action_clip = action.tanh()
             self.replay_buffer.states.append(state)
             self.replay_buffer.actions.append(action)
+            # self.replay_buffer.actions_clip.append(action_clip)
             self.replay_buffer.logprobs.append(action_logprob)
             self.replay_buffer.state_values.append(state_val)
 
-            return action.detach().cpu().numpy().flatten()
+            return action_clip.detach().cpu().numpy().flatten()
         else:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
@@ -335,7 +331,6 @@ class PPO:
             self.replay_buffer.actions.append(action)
             self.replay_buffer.logprobs.append(action_logprob)
             self.replay_buffer.state_values.append(state_val)
-
             return action.item()
 
     def learn(self, ):
@@ -358,7 +353,10 @@ class PPO:
         old_actions = torch.squeeze(torch.stack(self.replay_buffer.actions, dim=0)).detach().to(self.device)
         old_logprobs = torch.squeeze(torch.stack(self.replay_buffer.logprobs, dim=0)).detach().to(self.device)
         old_state_values = torch.squeeze(torch.stack(self.replay_buffer.state_values, dim=0)).detach().to(self.device)
-
+        # print(old_states)
+        # print(old_actions)
+        # print(old_logprobs)
+        # print(old_state_values)
         
         advantages = rewards.detach() - old_state_values.detach()
 
@@ -366,7 +364,6 @@ class PPO:
         for _ in range(self.K_epochs):
             
             logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
-            # logprobs, state_values, dist_entropy = self.policy_old.evaluate(old_states, old_actions)
             
             state_values = torch.squeeze(state_values)
             ratios = torch.exp(logprobs - old_logprobs.detach())

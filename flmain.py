@@ -22,7 +22,6 @@ def main(conf, dir_alpha = 0.3):
 	# torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
 	torch.set_float32_matmul_precision('high')
 	
-	date = datetime.datetime.now().strftime('%m-%d')
 	torch.manual_seed(2023)
 	np.random.seed(2023)
 	random.seed(2023)
@@ -36,9 +35,8 @@ def main(conf, dir_alpha = 0.3):
 	eval_dataset = dataset.eval_dataset
 	server = Server(conf, eval_dataset, compile = conf['compile'])
 	
-	num_clients = conf['f_uav_num']
+	num_clients = conf['config_train'].UAV_NUM
 	clients = []
-	np.random.seed(2023)
 	for i in range(num_clients):  
 		_ = Client(conf,  dataset.train_dataset, dataset.dataset_indice_list[i], id=i, compile = conf['compile'])
 		clients.append(_)
@@ -63,7 +61,7 @@ def main(conf, dir_alpha = 0.3):
 		# candidates = clients
 		candidates = []
 		datasize_total = 0
-		for i in conf['candidates']:
+		for i in conf['config_train'].CONDIDATE:
 			candidates.append(clients[i])	
 			datasize_total += clients[i].datasize
 
@@ -146,50 +144,45 @@ def main(conf, dir_alpha = 0.3):
 		df_list.append(global_epoch_dic)
 
 	df = pd.DataFrame(df_list)
-	# df.to_csv(f'./log/log{date}.csv')
-	# date = datetime.datetime.now().strftime('%m-%d')
-	# ts = time.time()
+	df.to_csv(f'./output/FL_main_output/FedAvg{dir_alpha}.csv')
+	
+	ts = datetime.datetime.now().strftime('%m-%d')
 	# flvisual(df, ts, )
 	return df
 
 if __name__ == '__main__':
-    # for test data_dis_visual
-    # ls1 = [{'global_accuracy':1, 'global_loss':2}, {'global_accuracy':3, 'global_loss':5},]
-    # ls2 = [{'global_accuracy':5, 'global_loss':6}, {'global_accuracy':4, 'global_loss':5},]
-    # df1 = pd.DataFrame(ls1)
-    # df2 = pd.DataFrame(ls2)
-    # df_list = [(df1, 1), (df2, 2)]
-    # data_dis_visual(df_list=df_list)
     
-	# date = datetime.datetime.now().strftime('%H:%M:%S')
-	# print(date)
-	
-    print(torch.cuda.is_available())
-    print(torch.__version__)
-    # torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
-    # torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
-    # torch.set_float32_matmul_precision('high')
-    with open('./conf.json' , 'r') as f:
-        conf = json.load(f)
-    config_train = ConfigTrain
-    config_draw = ConfigDraw
-    conf['config_train'] = config_train
-    conf["config_draw"] = config_draw
-    
+	print(torch.cuda.is_available())
+	print(torch.__version__)
+	# torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
+	# torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
+	# torch.set_float32_matmul_precision('high')
+	with open('./conf.json' , 'r') as f:
+		conf = json.load(f)
+	config_train = ConfigTrain
+	config_draw = ConfigDraw
+	conf['config_train'] = config_train
+	conf["config_draw"] = config_draw
 
-    # df1 = main(conf=conf, dir_alpha=0.3)
-    # df2 = main(conf=conf, dir_alpha=0.6)
-    # df3 = main(conf=conf, dir_alpha=1)
-    df4 = main(conf=conf, dir_alpha=0.3)
-    df_list = [
+
+	main(conf=conf, dir_alpha=0.3)
+	main(conf=conf, dir_alpha=0.6)
+	main(conf=conf, dir_alpha=1)
+	main(conf=conf, dir_alpha=10)
+	df1 = pd.read_csv(f'./output/FL_main_output/FedAvg{0.3}.csv')
+	df2 = pd.read_csv(f'./output/FL_main_output/FedAvg{0.6}.csv')
+	df3 = pd.read_csv(f'./output/FL_main_output/FedAvg{1}.csv')
+	df4 = pd.read_csv(f'./output/FL_main_output/FedAvg{10}.csv')
+
+	df_list = [
 			(df1, 0.3), 
-	       (df2, 0.6), 
-		   (df3, 1), 
-		   (df4, 10),
-		   ]
-    
-    data_dis_visual(df_list=df_list)
-        
+			(df2, 0.6), 
+			(df3, 1), 
+			(df4, 10),
+			]
+
+	data_dis_visual(df_list=df_list)
+		
 		
 	
 		

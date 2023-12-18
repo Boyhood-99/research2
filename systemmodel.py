@@ -96,7 +96,7 @@ class SystemModel(object):
         D = np.array(D).reshape(self.f_uav_num, 1)
         return D
 
-    def Gain(self, f_uav_location, l_uav_location, alpha, d, num_episode):
+    #def Gain(self, f_uav_location, l_uav_location, alpha, d, num_episode):
         alpha = alpha
         f_uav_location = f_uav_location
         l_uav_location = l_uav_location
@@ -110,61 +110,40 @@ class SystemModel(object):
             phi_y = (l_uav_location[1]-f_uav_location[i][1])/d[i]+alpha[1]
             phi_z = (self.l_uav_H-self.f_uav_H)/d[i]+alpha[2]
 #----------------------------------------------------------------------------------------------
-            g_x = (math.sin(self.A_x*math.pi/2*phi_x)/(self.A_x*math.sin(math.pi/2*phi_x)))**2
-            g_y = (math.sin(self.A_y*math.pi/2*phi_y)/(self.A_y*math.sin(math.pi/2*phi_y)))**2
-            g_z = (math.sin(self.A_z*math.pi/2*phi_z)/(self.A_z*math.sin(math.pi/2*phi_z)))**2
+            # g_x = (math.sin(self.A_x*math.pi/2*phi_x)/(self.A_x*math.sin(math.pi/2*phi_x)))**2
+            # g_y = (math.sin(self.A_y*math.pi/2*phi_y)/(self.A_y*math.sin(math.pi/2*phi_y)))**2
+            # g_z = (math.sin(self.A_z*math.pi/2*phi_z)/(self.A_z*math.sin(math.pi/2*phi_z)))**2
 
-            if phi_x < -2*self.delta/self.A_x  or  2*self.delta/self.A_x < phi_x :
-                g_x = 1/(self.A_x*self.A_y*self.A_z)
-            if phi_y < -2*self.delta/self.A_y  or  2*self.delta/self.A_y < phi_y :
-                g_y = 1/(self.A_x*self.A_y*self.A_z)
-            if phi_z < -2*self.delta/self.A_z  or  2*self.delta/self.A_z < phi_z :
-                g_z = 1/(self.A_x*self.A_y*self.A_z)
-
-            # if -1.5< phi_x < -0.5 or  0.5< phi_x < 1.5:
-            #     g_x = 1/9
-            # if -1.5< phi_y < -0.5 or  0.5< phi_y < 1.5:
-            #     g_y = 1/9
-            # if -1.5< phi_z < -0.5 or  0.5< phi_z < 1.5:
-            #     g_z = 1/9
+            # if phi_x < -2*self.delta/self.A_x  or  2*self.delta/self.A_x < phi_x :
+            #     g_x = 1/(self.A_x*self.A_y*self.A_z)
+            # if phi_y < -2*self.delta/self.A_y  or  2*self.delta/self.A_y < phi_y :
+            #     g_y = 1/(self.A_x*self.A_y*self.A_z)
+            # if phi_z < -2*self.delta/self.A_z  or  2*self.delta/self.A_z < phi_z :
+            #     g_z = 1/(self.A_x*self.A_y*self.A_z)
            
-            g = self.A_x*self.A_y*self.A_z*g_x*g_y*g_z
+            # g = self.A_x*self.A_y*self.A_z*g_x*g_y*g_z
+
 #--------------------------------------------------------------------------------
-            # phi_x = phi_x*math.pi/2
-            # phi_y = phi_y*math.pi/2
-            # phi_z = phi_z*math.pi/2
-
-            # g_x = (math.sin(self.A_x*phi_x)/(self.A_x*math.sin(phi_x)))**2
-            # g_y = (math.sin(self.A_y*phi_y)/(self.A_y*math.sin(phi_y)))**2
-            # g_z = (math.sin(self.A_z*phi_z)/(self.A_z*math.sin(phi_z)))**2
-
-            # if -1.5< phi_x < -0.5 or  0.5< phi_x < 1.5:
-            #     g_x = 1/9
-            # if -1.5< phi_y < -0.5 or  0.5< phi_y < 1.5:
-            #     g_y = 1/9
-            # if -1.5< phi_z < -0.5 or  0.5< phi_z < 1.5:
-            #     g_z = 1/9
-           
-            # g = self.A_x*self.A_y*self.A_z*g_x*g_y*g_z
-
-# ----------------------------------------------------------------------------------
-            # if np.abs(phi_x) < self.delta*np.pi/self.A_x:
-            #     g_x = np.power(np.cos(self.A_x*phi_x/2),2)
-            # else :
-            #     g_x = np.power(np.cos(self.delta*np.pi/2),2)/(1+(np.power(phi_x,2)-\
-            #         np.power(self.delta*np.pi/self.A_x,2))*np.tan(self.delta*np.pi/2)*np.power(self.A_x,2)/(2*self.delta*np.pi))
-            # if np.abs(phi_y) < self.delta*np.pi/self.A_y:
-            #     g_y = np.power(np.cos(self.A_y*phi_y/2),2)
-            # else:
-            #     g_y = np.power(np.cos(self.delta*np.pi/2),2)/(1+(np.power(phi_y,2)-\
-            #         np.power(self.delta*np.pi/self.A_y,2))*np.tan(self.delta*np.pi/2)*np.power(self.A_y,2)/(2*self.delta*np.pi))
-            # if np.abs(phi_z) < self.delta*np.pi/self.A_z:
-            #     g_z = np.power(np.cos(self.A_z*phi_z/2),2)
-            # else:
-            #     g_z = np.power(np.cos(self.delta*np.pi/2),2)/(1+(np.power(phi_z,2)-\
-            #         np.power(self.delta*np.pi/self.A_z,2))*np.tan(self.delta*np.pi/2)*np.power(self.A_z,2)/(2*self.delta*np.pi))
+            phi_x = phi_x*math.pi/2
+            phi_y = phi_y*math.pi/2
+            phi_z = phi_z*math.pi/2
+            if np.abs(phi_x) < self.delta*np.pi/self.A_x:
+                g_x = np.power(np.cos(self.A_x*phi_x/2),2)
+            else :
+                g_x = np.power(np.cos(self.delta*np.pi/2),2)/(1+(np.power(phi_x,2)-\
+                    np.power(self.delta*np.pi/self.A_x,2))*np.tan(self.delta*np.pi/2)*np.power(self.A_x,2)/(2*self.delta*np.pi))
+            if np.abs(phi_y) < self.delta*np.pi/self.A_y:
+                g_y = np.power(np.cos(self.A_y*phi_y/2),2)
+            else:
+                g_y = np.power(np.cos(self.delta*np.pi/2),2)/(1+(np.power(phi_y,2)-\
+                    np.power(self.delta*np.pi/self.A_y,2))*np.tan(self.delta*np.pi/2)*np.power(self.A_y,2)/(2*self.delta*np.pi))
+            if np.abs(phi_z) < self.delta*np.pi/self.A_z:
+                g_z = np.power(np.cos(self.A_z*phi_z/2),2)
+            else:
+                g_z = np.power(np.cos(self.delta*np.pi/2),2)/(1+(np.power(phi_z,2)-\
+                    np.power(self.delta*np.pi/self.A_z,2))*np.tan(self.delta*np.pi/2)*np.power(self.A_z,2)/(2*self.delta*np.pi))
             
-            # g = self.A_x*self.A_y*self.A_z*g_x*g_y*g_z
+            g = self.A_x*self.A_y*self.A_z*g_x*g_y*g_z
 #-----------------------------------------------------------------------------------
           
       
@@ -210,7 +189,7 @@ class SystemModel(object):
 
         # latency
         for i in range(self.f_uav_num):
-            t_up_ = self.S_w_ / comm_rate_up[i]
+            t_up_ = self.S_w_ / (comm_rate_up[i]+0.00001)
             t_up.append(t_up_)
 
         t_up = np.array(t_up).reshape(self.f_uav_num, 1)
@@ -289,7 +268,7 @@ class SystemModel(object):
 
         # t_down
         for i in range(self.f_uav_num):
-            t_down_ = self.S_w / comm_rate_down[i]
+            t_down_ = self.S_w / (comm_rate_down[i]+0.00001)
             t_down.append(t_down_)
 
         t_down = np.array(t_down).reshape(self.f_uav_num, 1)
@@ -350,7 +329,7 @@ class SystemModel2(SystemModel):
         phi = []
         
         for i in range(self.f_uav_num):
-            phi_x = (l_uav_location[0]-f_uav_location[i][0] )/d[i]
+            phi_x = (l_uav_location[0]-f_uav_location[i][0])/d[i]
             phi_y = (l_uav_location[1]-f_uav_location[i][1])/d[i]
             phi_z = (l_uav_location[2]-f_uav_location[i][2])/d[i]
             phi.append(phi_x)
@@ -374,14 +353,6 @@ class SystemModel2(SystemModel):
             g_x = (math.sin(self.A_x*math.pi/2*phi_x)/(self.A_x*math.sin(math.pi/2*phi_x)+0.00001))**2
             g_y = (math.sin(self.A_y*math.pi/2*phi_y)/(self.A_y*math.sin(math.pi/2*phi_y)+0.00001))**2
             g_z = (math.sin(self.A_z*math.pi/2*phi_z)/(self.A_z*math.sin(math.pi/2*phi_z)+0.00001))**2
-            #####  for SAC
-            # g_x = (math.sin(self.A_x*math.pi/2*phi_x)/(self.A_x*math.sin(math.pi/2*phi_x)))**2
-            # g_y = (math.sin(self.A_y*math.pi/2*phi_y)/(self.A_y*math.sin(math.pi/2*phi_y)))**2
-            # g_z = (math.sin(self.A_z*math.pi/2*phi_z)/(self.A_z*math.sin(math.pi/2*phi_z)))**2
-
-            # g_x = (math.sin(self.A_x*math.pi/2*phi_x)*math.pow((self.A_x*math.sin(math.pi/2*phi_x)), -1))**2
-            # g_y = (math.sin(self.A_y*math.pi/2*phi_y)*math.pow((self.A_y*math.sin(math.pi/2*phi_y)), -1))**2
-            # g_z = (math.sin(self.A_z*math.pi/2*phi_z)*math.pow((self.A_z*math.sin(math.pi/2*phi_z)), -1))**2
 
             if phi_x < -2*self.delta/self.A_x  or  2*self.delta/self.A_x < phi_x :
                 g_x = 1/(self.A_x*self.A_y)
@@ -389,9 +360,28 @@ class SystemModel2(SystemModel):
                 g_y = 1/(self.A_x*self.A_y)
             if phi_z < -2*self.delta/self.A_z  or  2*self.delta/self.A_z < phi_z :
                 g_z = 1/(self.A_x*self.A_y)
-
+#--------------------------------------------------------------
+            # phi_x = phi_x*math.pi/2
+            # phi_y = phi_y*math.pi/2
+            # phi_z = phi_z*math.pi/2
+            # if np.abs(phi_x) < self.delta*np.pi/self.A_x:
+            #     g_x = np.power(np.cos(self.A_x*phi_x/2),2)
+            # else :
+            #     g_x = np.power(np.cos(self.delta*np.pi/2),2)/(1+(np.power(phi_x,2)-\
+            #         np.power(self.delta*np.pi/self.A_x,2))*np.tan(self.delta*np.pi/2)*np.power(self.A_x,2)/(2*self.delta*np.pi))
+            # if np.abs(phi_y) < self.delta*np.pi/self.A_y:
+            #     g_y = np.power(np.cos(self.A_y*phi_y/2),2)
+            # else:
+            #     g_y = np.power(np.cos(self.delta*np.pi/2),2)/(1+(np.power(phi_y,2)-\
+            #         np.power(self.delta*np.pi/self.A_y,2))*np.tan(self.delta*np.pi/2)*np.power(self.A_y,2)/(2*self.delta*np.pi))
+            # if np.abs(phi_z) < self.delta*np.pi/self.A_z:
+            #     g_z = np.power(np.cos(self.A_z*phi_z/2),2)
+            # else:
+            #     g_z = np.power(np.cos(self.delta*np.pi/2),2)/(1+(np.power(phi_z,2)-\
+            #         np.power(self.delta*np.pi/self.A_z,2))*np.tan(self.delta*np.pi/2)*np.power(self.A_z,2)/(2*self.delta*np.pi))
+#----------------------------------------------------------------------------------------            
             g = self.A_x*self.A_y*self.A_z*g_x*g_y*g_z
-            
+            ##3 0.037;5,0.008;7,0.003
             if g  > 0.01:    
                 index.append(i)               
             G.append(g)
@@ -408,7 +398,6 @@ class SystemModel2(SystemModel):
         index = np.array(index).reshape(num_seletced, 1)
 
         return G, index
-
 
     def ofdma_t_up(self, index, D, G):
         return super().ofdma_t_up(index, D, G)

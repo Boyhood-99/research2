@@ -34,11 +34,13 @@ def train(conf, fl, test, rl, dir):
             ep_reward, energy_consum = rl.episode(epi_num, conf['global_epochs'])
             if len(return_ls) >= 1 and ep_reward > max(return_ls):
                 rl.save_model()
-            if epi_num% 20 == 0:
+            if epi_num% 2 == 0:
                 # print(len(rl.agent.replay_buffer.rewards))
-                rl.update(update_times = 200)
-            if epi_num % 50 == 0:
-                rl.std_decay()
+                # print(rl.agent.replay_buffer.rewards)
+                # print(rl.agent.replay_buffer.is_terminals)
+                rl.update(update_times = 20)
+            # if epi_num % 10 == 0:
+            #     rl.std_decay()
 
             return_ls.append(ep_reward)
             ene_consum_ls.append(energy_consum/1000)
@@ -71,7 +73,7 @@ if __name__ == '__main__':
     # np.random.seed(0)
     # torch.manual_seed(0)
     test = True
-    fl = False
+    fl = True
     print(torch.cuda.is_available())
     print(torch.__version__)
 
@@ -85,19 +87,19 @@ if __name__ == '__main__':
     conf['config_train'] = config_train
     conf["config_draw"] = config_draw 
 
-    
-    train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
-    train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
-    train(conf, fl = fl, test = test, rl = AgentDDPG(conf,  dir='./output/main_output/DDPG'), dir='./output/main_output/DDPG/')
-    train(conf, fl = fl, test = test, rl = Proposed(conf,  dir='./output/main_output/Proposed'), dir='./output/main_output/Proposed')
+    # train(conf, fl = fl, test = test, rl = AgentDDPG(conf,  dir='./output/main_output/DDPG'), dir='./output/main_output/DDPG/')
+
+    # train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
+    # train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
+    # train(conf, fl = fl, test = test, rl = Proposed(conf,  dir='./output/main_output/Proposed'), dir='./output/main_output/Proposed')
 
 
     if True:
-        rlvisual(fl = fl, patent = False, is_beam=config_train.IS_BEAM, ula_num=config_train.ULA_NUM)   
-        tra_visual(dir='./output/main_output/PPO/')
-        tra_visual(dir='./output/main_output/SAC/')
-        tra_visual(dir='./output/main_output/DDPG/')
-        tra_visual(dir='./output/main_output/Proposed')
+        rlvisual(fl = fl, patent = True, is_beam=config_train.IS_BEAM, ula_num=config_train.ULA_NUM)   
+        # tra_visual(dir='./output/main_output/PPO/')
+        # tra_visual(dir='./output/main_output/SAC/')
+        # tra_visual(dir='./output/main_output/DDPG/')
+        # tra_visual(dir='./output/main_output/Proposed')
 
 
         

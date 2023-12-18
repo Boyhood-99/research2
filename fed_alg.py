@@ -27,7 +27,7 @@ class FedAvg():
             
             self.global_model_init = copy.deepcopy(self.server.global_model.state_dict())
             
-            num_clients = self.conf['f_uav_num']
+            num_clients = self.conf['config_train'].UAV_NUM
             self.clients = []
             for i in range(num_clients):  
                 self.clients.append(Client(self.conf,  self.dataset.train_dataset, self.dataset.dataset_indice_list[i], id=i, compile = self.conf['compile']))
@@ -53,14 +53,14 @@ class FedAvg():
         self.global_epoch_dic['global_loss'] = loss
         # df_list.append(self.global_epoch_dic)
         return self.global_epoch_dic
-    def iteration(self, global_epoch, local_epochs, auto_lr=None):
+    def iteration(self, global_epoch, local_epochs, candidate_index, auto_lr=None):
         lr = self.conf['lr'] if auto_lr is None else auto_lr
         begin = time.time()
         date = datetime.datetime.now().strftime('%m-%d')
         
         self.candidates = []
         self.datasize_total = 0
-        for i in self.conf['candidates']:
+        for i in candidate_index:
             can = self.clients[i]
             assert isinstance(can, Client)
             self.datasize_total += can.datasize
@@ -117,8 +117,6 @@ class FedAvg():
             for name, params in self.server.global_model.state_dict().items():
                 # weight_accumulator[name].add_(diff[name])
                 weight_accumulator[name].add_(diff[name])
-                # self.global_epoch_dic[f'f_uav{candidates[i].client_id}'] = loss_dic
-            # print(f"L_UAV_{self.client_id} complete the {local_epoch+1}-th local iteration ")
         #--------------------------------------------多线程
         avg_local_loss = np.array(loss_list).mean()
         
@@ -189,7 +187,7 @@ class FedDyn(FedAvg):
     def iteration(self, global_epoch, local_epochs, auto_lr=None ): 
         begin = time.time()   
         self.candidates = []
-        for i in self.conf['candidates']:
+        for i in self.conf['config_train'].CONDIDATE:
             self.candidates.append(self.clients[i])		
 
         self.global_epoch_dic = {} #for print log
