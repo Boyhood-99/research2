@@ -100,9 +100,9 @@ def flvisual(df, date = None, patent = False, diretory = f'./output/main_output/
     fig1.savefig(os.path.join(diretory, f'{date}.eps'))
 
 
-def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_num = 3,):
+def rlvisual(is_smooth = False, fl = False, patent = False, is_beam = True, ula_num = 3,):
     
-    #####     可视化FL
+    #####   FL可视化
     if fl:
         df_fl_SAC  = pd.read_csv('./patent/SAC/acc_loss.csv')   if patent else pd.read_csv('./output/main_output/SAC/acc_loss.csv')
         df_fl_DDPG = pd.read_csv('./patent/DDPG/acc_loss.csv')  if patent else pd.read_csv('./output/main_output/DDPG/acc_loss.csv')
@@ -137,7 +137,7 @@ def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_n
     ene_consum_ls_PPO   =  return_ene_PPO['energy']
     ene_consum_ls_Pro   =  return_ene_Pro['energy']
 
-    #####
+    #####    return
     fig1, ax1 = plt.subplots()
     
     if patent:
@@ -165,9 +165,9 @@ def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_n
             # ax1.plot(return_ls_PPO, color = 'lightgreen', linewidth = 1, linestyle='-',label='return with PPO')
             # ax1.plot(return_ls_Pro, color = 'gray', linewidth = 1, linestyle='-',label='return with Proposed')
         else:
-            # ax1.plot(return_ls_DDPG, color = 'blue', linewidth = 1, linestyle='-',label='return with DDPG')
+            ax1.plot(return_ls_DDPG, color = 'blue', linewidth = 1, linestyle='-',label='return with DDPG')
             ax1.plot(return_ls_PPO, color = 'green', linewidth = 1, linestyle='-',label='return with PPO')
-            ax1.plot(return_ls_Pro, color = 'red', linewidth = 1, linestyle='-',label='return with DDPG')
+            # ax1.plot(return_ls_Pro, color = 'red', linewidth = 1, linestyle='-',label='return with DDPG')
             ax1.plot(return_ls_SAC, color = 'lime' ,  linewidth = 1, linestyle='-',label='return with Proposed')
         
         ax1.set_xlabel('Episodes')
@@ -178,7 +178,7 @@ def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_n
     fig1.savefig('./output/main_output/RL/return.eps')
     fig1.savefig('./output/main_output/RL/return.pdf')
 
-    ########
+    ########  energy
     fig2, ax2 = plt.subplots()
     if patent:
         # ax2.plot(ene_consum_ls_PPO, color = 'green', linewidth=1, linestyle='-',label='PPO')
@@ -188,10 +188,9 @@ def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_n
         ax2.set_ylabel('能耗（千焦）', fontproperties='SimHei',)
         ax2.legend(loc = 'best', prop = {'family':'SimHei','size':14})
     else:
-        
-        # ax2.plot(ene_consum_ls_DDPG, linewidth=1, linestyle='-',label='energy consumption with DDPG')
+        # ax2.plot(ene_consum_ls_Pro, color = 'red',  linewidth=1, linestyle='-',label='energy consumption with DDPG')
+        ax2.plot(ene_consum_ls_DDPG, color = 'red', linewidth=1, linestyle='-',label='energy consumption with DDPG')
         ax2.plot(ene_consum_ls_PPO, color = 'green', linewidth=1, linestyle='-',label='energy consumption with PPO')
-        ax2.plot(ene_consum_ls_Pro, color = 'red',  linewidth=1, linestyle='-',label='energy consumption with DDPG')
         ax2.plot(ene_consum_ls_SAC, color = 'lime',  linewidth=1, linestyle='-',label='energy consumption with Proposed')
         ax2.set_xlabel('Episodes')
         ax2.set_ylabel('Energy consumption (kJ)')

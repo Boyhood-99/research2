@@ -305,7 +305,7 @@ class AgentPPO(AgentSAC):
         if self.has_continuous_action_space:
             self.agent.decay_action_std(self.action_std_decay_rate, self.min_action_std)
 
-class Proposed(AgentDDPG):
+class DDPG_(AgentDDPG):
     def __init__(self, conf, dir='./DDPG') -> None:
         super().__init__(conf, dir)
         

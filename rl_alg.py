@@ -200,7 +200,7 @@ class SAC(object,):
         state = torch.FloatTensor(state).to(self.device)
         mean, log_std = self.actor(state) 
         mean = mean.tanh()  
-        print(log_std.exp())
+        # print(log_std.exp())
         return mean.detach().cpu().numpy()
 
     def soft_update(self,target_net, current_net, tau):

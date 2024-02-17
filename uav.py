@@ -91,8 +91,8 @@ class Server(object):
 	
 class Client(object):
 
-	def __init__(self, conf, train_dataset, dataset_indice, id = -1, compile = False):
-		self.feddecorr = 0
+	def __init__(self, conf, train_dataset, dataset_indice, id = -1, compile = False, feddecorr = True):
+		self.feddecorr = feddecorr
 		self.feddecorr_coef = 0.1
 		# self.location = torch.zeros(size=(3))
 		self.conf = conf

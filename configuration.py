@@ -26,16 +26,16 @@ class ConfigDraw:
 @dataclass
 class ConfigTrain:
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    MAX_EPISODES = 500#500#1000
-    BATCHSIZE = 256 ##256
+    MAX_EPISODES = 4#500#1000
+    BATCHSIZE = 256##256 ##256
     
     UAV_NUM = 5
     CONDIDATE = list(range(UAV_NUM))
     IS_NORM_MAN = False
 
     ###should larger than batchsize 
-    WARM_UP = 2000 #500 #1000
-    BUFFER_SIZE = 8000#8000 #15000
+    WARM_UP = 1000#2000 
+    BUFFER_SIZE = 7000#8000 #15000
     ###  beamforming
     IS_BEAM = True
     ULA_NUM = 3

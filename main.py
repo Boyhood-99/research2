@@ -7,7 +7,7 @@ from uav import *
 from torch.utils.tensorboard import SummaryWriter
 from visualization import  flvisual, rlvisual, tra_visual
 from configuration import ConfigDraw, ConfigTrain
-from agent import AgentSAC, AgentDDPG, AgentPPO, Proposed
+from agent import AgentSAC, AgentDDPG, AgentPPO, DDPG_
 import os
 
 writer = SummaryWriter('./tensorboard/log/')
@@ -51,6 +51,7 @@ def train(conf, fl, test, rl, dir):
     return_ls.append(return_ls_mean)
     ene_consum_ls_mean = np.mean(ene_consum_ls[-len(ene_consum_ls)//5:])
     ene_consum_ls.append(ene_consum_ls_mean)
+
     ls_return_ene = [[i ,j] for i, j in zip(return_ls, ene_consum_ls)]  
     df_return_ene = pd.DataFrame(ls_return_ene, columns=['return', 'energy'])
     df_return_ene.to_csv(os.path.join(dir, f'return_ene{is_beam}{ula_num}.csv'))
@@ -59,12 +60,12 @@ def train(conf, fl, test, rl, dir):
     if test:
         if fl:
             df_fl = pd.DataFrame(acc_loss_test)
-            df_fl.to_csv(os.path.join(dir, f'acc_loss.csv'))
+            df_fl.to_csv(os.path.join(dir, f'acc_loss{is_beam}{ula_num}.csv'))
         df_actions = pd.DataFrame(actions)
-        df_actions.to_csv(os.path.join(dir, f'actions.csv'))
+        df_actions.to_csv(os.path.join(dir, f'actions{is_beam}{ula_num}.csv'))
 
         df_tra = pd.DataFrame(tra_ls)
-        df_tra.to_csv(os.path.join(dir, f'tra.csv'))
+        df_tra.to_csv(os.path.join(dir, f'tra{is_beam}{ula_num}.csv'))
 
     return return_ls, ene_consum_ls, df_fl   
 
@@ -87,19 +88,20 @@ if __name__ == '__main__':
     conf['config_train'] = config_train
     conf["config_draw"] = config_draw 
 
-    # train(conf, fl = fl, test = test, rl = AgentDDPG(conf,  dir='./output/main_output/DDPG'), dir='./output/main_output/DDPG/')
+    train(conf, fl = fl, test = test, rl = AgentDDPG(conf,  dir='./output/main_output/DDPG'), dir='./output/main_output/DDPG/')
+    train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
+    train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
 
-    # train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
-    # train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
-    # train(conf, fl = fl, test = test, rl = Proposed(conf,  dir='./output/main_output/Proposed'), dir='./output/main_output/Proposed')
+    # train(conf, fl = fl, test = test, rl = DDPG_(conf,  dir='./output/main_output/Proposed'), dir='./output/main_output/Proposed')
 
 
     if True:
-        rlvisual(fl = fl, patent = True, is_beam=config_train.IS_BEAM, ula_num=config_train.ULA_NUM)   
+        rlvisual(patent = False, is_beam=config_train.IS_BEAM, ula_num=config_train.ULA_NUM)   
         # tra_visual(dir='./output/main_output/PPO/')
         # tra_visual(dir='./output/main_output/SAC/')
         # tra_visual(dir='./output/main_output/DDPG/')
         # tra_visual(dir='./output/main_output/Proposed')
+        pass
 
 
         

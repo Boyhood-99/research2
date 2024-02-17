@@ -249,8 +249,7 @@ class Environment2(Environment):
         assert isinstance(self.conf['config_train'], ConfigTrain)
         self.is_beam = self.conf['config_train'].IS_BEAM
         self.is_norm_man = self.conf['config_train'].IS_NORM_MAN
-        # self.dataset = Dataset(self.conf)
-        self.fl = FedAvg(conf = self.conf, dir_alpha=0.3)
+        self.fl = FedAvg(conf = self.conf, dir_alpha=0.3, feddecorr=True)
         # self.fl = FedDyn(conf = self.conf, dir_alpha=0.3)
         datasize = self.fl.get_datasize()
         self.systemmodel = SystemModel2(datasize, f_uav_num = self.f_uav_num, 
@@ -289,8 +288,9 @@ class Environment2(Environment):
         self.df_list = []
         self.step_num = 0
         self.time_total = 0
-        # global_epoch_dic = self.fl.reset()
-        # self.df_list.append(global_epoch_dic)
+        ####fl
+        global_epoch_dic = self.fl.reset()
+        self.df_list.append(global_epoch_dic)
         
         #随机初始化底层无人机位置，范围{0，1000}
         # np.random.seed(1)
@@ -359,12 +359,13 @@ class Environment2(Environment):
         local_epochs = int(action[2])
         self.step_num += 1
 
-        global_epoch_dic = {}
-        diff_acc = 0
-        diff_loss = 0
-        avg_local_loss = 0
+        # global_epoch_dic = {}
+        # diff_acc = 0
+        # diff_loss = 0
+        # avg_local_loss = 0
 
-        # global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, local_epochs, )
+        global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, \
+                                                        local_epochs, candidate_index=self.conf["config_train"].CONDIDATE)
         
         self.df_list.append(global_epoch_dic)
         self.fl_time = time.time() - time_begin

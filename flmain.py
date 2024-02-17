@@ -22,7 +22,6 @@ def main(conf, dir_alpha = 0.3):
 	# torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
 	# torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
 	torch.set_float32_matmul_precision('high')
-	
 	torch.manual_seed(2023)
 	np.random.seed(2023)
 	random.seed(2023)
@@ -78,7 +77,7 @@ if __name__ == '__main__':
 			(df4, 10),
 			]
 
-	data_dis_visual(df_list=df_list)
+	# data_dis_visual(df_list=df_list)
 		
 		
 	

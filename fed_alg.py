@@ -14,11 +14,12 @@ import numpy as np
 implementation of different FL algorithms
 '''
 class FedAvg():
-    def __init__(self, conf,  dir_alpha=0.3) -> None:
+    def __init__(self, conf,  dir_alpha=0.3, feddecorr = True) -> None:
             np.random.seed(2023)
             torch.manual_seed(2023)
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
             self.name = 'FedAvg'
+            self.feddecorr = feddecorr
             self.conf = conf
             self.dataset = Dataset(self.conf, dir_alpha=dir_alpha)
 
@@ -30,7 +31,8 @@ class FedAvg():
             num_clients = self.conf['config_train'].UAV_NUM
             self.clients = []
             for i in range(num_clients):  
-                self.clients.append(Client(self.conf,  self.dataset.train_dataset, self.dataset.dataset_indice_list[i], id=i, compile = self.conf['compile']))
+                self.clients.append(Client(self.conf,  self.dataset.train_dataset, self.dataset.dataset_indice_list[i], \
+                                           id=i, compile = self.conf['compile'], feddecorr=self.feddecorr))
 
             # acc, loss = self.server.model_eval()
             # self.acc = acc
@@ -162,8 +164,8 @@ class FedAvg():
             candidate.local_model.load_state_dict(self.server.global_model.state_dict())
 
 class FedProx(FedAvg):
-    def __init__(self, conf, ) -> None:
-        super().__init__(conf, )
+    def __init__(self, conf, dir_alpha=0.3, feddecorr=False) -> None:
+        super().__init__(conf, dir_alpha, feddecorr)
         self.name = 'FedProx'
 
     def iteration(self, global_epoch, local_epochs):
@@ -171,8 +173,8 @@ class FedProx(FedAvg):
     
 
 class FedDyn(FedAvg):
-    def __init__(self, conf, dir_alpha=0.3) -> None:
-        super().__init__(conf, dir_alpha)
+    def __init__(self, conf, dir_alpha=0.3, feddecorr = False) -> None:
+        super().__init__(conf, dir_alpha, feddecorr)
         self.h = {
             key: torch.zeros(params.shape, device=self.device)
             for key, params in self.server.global_model.state_dict().items()

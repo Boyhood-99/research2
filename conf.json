@@ -12,7 +12,7 @@
 	"lambda" : 0.1,
 	"compile" : false,
 
-	"global_epochs" : 2,
+	"global_epochs" : 20,
 	
 	"local_epochs" : 5,
 	"local_epochs_min":2,
