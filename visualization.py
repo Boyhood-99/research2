@@ -38,19 +38,19 @@ def data_dis_visual(df_list, patent = True, flag = None, diretory = f'./output/d
 
     if patent:
         ax1.set_xlabel('全局轮次', fontproperties = 'SimHei')
-        ax1.set_ylabel('准确度', fontproperties = 'SimHei')
+        ax1.set_ylabel('准确率（%）', fontproperties = 'SimHei')
         ax2.set_xlabel('全局轮次', fontproperties = 'SimHei')
         ax2.set_ylabel('损失', fontproperties = 'SimHei')
 
     if not os.path.exists(diretory):
         os.makedirs(diretory)  
-    fig1.savefig(os.path.join(diretory, 'acc_.png'))
-    fig1.savefig(os.path.join(diretory, 'acc_.pdf'))
-    fig1.savefig(os.path.join(diretory, 'acc_.eps'))
+    fig1.savefig(os.path.join(diretory, 'acc.png'))
+    fig1.savefig(os.path.join(diretory, 'acc.pdf'))
+    fig1.savefig(os.path.join(diretory, 'acc.eps'))
 
-    fig2.savefig(os.path.join(diretory, 'loss_.png'))
-    fig2.savefig(os.path.join(diretory, 'loss_.pdf'))
-    fig2.savefig(os.path.join(diretory, 'loss_.eps'))
+    fig2.savefig(os.path.join(diretory, 'loss.png'))
+    fig2.savefig(os.path.join(diretory, 'loss.pdf'))
+    fig2.savefig(os.path.join(diretory, 'loss.eps'))
 
 
 def flvisual(df, date = None, patent = False, diretory = f'./output/main_output/FL'):
@@ -67,7 +67,7 @@ def flvisual(df, date = None, patent = False, diretory = f'./output/main_output/
         axis1, = ax1.plot(SAC_glo_acc,  color= color_dic['1'], marker=marker_dict['1'], label = '所提算法', )
         axis2, = ax1.plot(DDPG_glo_acc, color= color_dic['2'], marker=marker_dict['2'], label = 'DDPG', )
         ax1.set_xlabel('全局轮次', fontproperties = 'SimHei')
-        ax1.set_ylabel('准确度', fontproperties = 'SimHei')
+        ax1.set_ylabel('准确率（%）', fontproperties = 'SimHei')
         # ax1.legend()
         
         ax2 = ax1.twinx()
@@ -75,7 +75,7 @@ def flvisual(df, date = None, patent = False, diretory = f'./output/main_output/
         axis4, = ax2.plot(DDPG_glo_loss, color= color_dic['4'], marker=marker_dict['4'], label = 'DDPG')
         ax2.set_ylabel('损失', fontproperties = 'SimHei')
         # ax2.legend()
-        plt.legend([axis1, axis2, axis3, axis4], ['模型准确度(所提算法)', '模型准确度(DDPG)',
+        plt.legend([axis1, axis2, axis3, axis4], ['模型准确率(所提算法)', '模型准确率(DDPG)',
                      '模型损失(所提算法)', '模型损失(DDPG)'], loc = 'center right', prop = 'SimHei')
     else:
         axis1, = ax1.plot(SAC_glo_acc,  color= color_dic['1'], marker=marker_dict['1'], label = 'test accuracy with proposed')
@@ -117,10 +117,15 @@ def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_n
 
     ######   return和energy 可视化
 
-    return_ene_SAC  =  pd.read_csv('./patent/SAC/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/SAC/return_ene{is_beam}{ula_num}.csv')
-    return_ene_DDPG = pd.read_csv('./patent/DDPG/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/DDPG/return_ene{is_beam}{ula_num}.csv')
-    return_ene_PPO = pd.read_csv('./patent/PPO/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/PPO/return_ene{is_beam}{ula_num}.csv')
-    return_ene_Pro = pd.read_csv('./patent/PPO/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/Proposed/return_ene{is_beam}{ula_num}.csv')
+    # return_ene_SAC  =  pd.read_csv('./patent/SAC/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/SAC/return_ene{is_beam}{ula_num}.csv')
+    # return_ene_DDPG = pd.read_csv('./patent/DDPG/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/DDPG/return_ene{is_beam}{ula_num}.csv')
+    # return_ene_PPO = pd.read_csv('./patent/PPO/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/PPO/return_ene{is_beam}{ula_num}.csv')
+    # return_ene_Pro = pd.read_csv('./patent/PPO/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/Proposed/return_ene{is_beam}{ula_num}.csv')
+
+    return_ene_SAC  =  pd.read_csv(f'./output/main_output/SAC/return_ene{is_beam}{ula_num}.csv')
+    return_ene_DDPG =  pd.read_csv(f'./output/main_output/DDPG/return_ene{is_beam}{ula_num}.csv')
+    return_ene_PPO =   pd.read_csv(f'./output/main_output/PPO/return_ene{is_beam}{ula_num}.csv')
+    return_ene_Pro =   pd.read_csv(f'./output/main_output/Proposed/return_ene{is_beam}{ula_num}.csv')
 
     return_ls_SAC  = return_ene_SAC['return']
     return_ls_DDPG = return_ene_DDPG['return']
@@ -136,12 +141,14 @@ def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_n
     fig1, ax1 = plt.subplots()
     
     if patent:
-        ax1.plot(return_ls_SAC,  linewidth = 1, linestyle='-',label='所提算法', )
-        ax1.plot(return_ls_DDPG, linewidth = 1, linestyle='-',label='DDPG')
-        ax1.plot(return_ls_PPO, linewidth = 1, linestyle='-',label='PPO')
+        # ax1.plot(return_ls_PPO, color = 'green', linewidth = 1, linestyle='-',label='PPO')
+        ax1.plot(return_ls_Pro, color = 'red', linewidth = 1, linestyle='-', )
+        ax1.plot(return_ls_SAC, color = 'lime' ,  linewidth = 1, linestyle='-', )
+        ax1.annotate('DDPG', xy=(130, return_ls_Pro[130]), xytext=(200, -20), arrowprops=dict(arrowstyle = '->', ),   font = 'SimHei')
+        ax1.annotate('所提算法', xy=(120, return_ls_SAC[120]), xytext=(0, -10), arrowprops=dict(arrowstyle = '->', ), font = 'SimHei')
         ax1.set_xlabel('回合', fontproperties='SimHei',)
         ax1.set_ylabel('回报', fontproperties='SimHei',)
-        ax1.legend(loc = 'best', prop = {'family':'SimHei','size':14})
+        # ax1.legend(loc = 'best', prop = {'family':'SimHei','size':14})
 
     else:
         if is_smooth:
@@ -174,9 +181,9 @@ def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_n
     ########
     fig2, ax2 = plt.subplots()
     if patent:
-        ax2.plot(ene_consum_ls_SAC,  linewidth=1, linestyle='-',label='所提算法')
-        ax2.plot(ene_consum_ls_DDPG, linewidth=1, linestyle='-',label='DDPG')
-        ax2.plot(ene_consum_ls_PPO,  linewidth=1, linestyle='-',label='PPO')
+        # ax2.plot(ene_consum_ls_PPO, color = 'green', linewidth=1, linestyle='-',label='PPO')
+        ax2.plot(ene_consum_ls_Pro, color = 'red',  linewidth=1, linestyle='-',label='DDPG')
+        ax2.plot(ene_consum_ls_SAC, color = 'lime',  linewidth=1, linestyle='-',label='所提算法')
         ax2.set_xlabel('回合', fontproperties='SimHei',)
         ax2.set_ylabel('能耗（千焦）', fontproperties='SimHei',)
         ax2.legend(loc = 'best', prop = {'family':'SimHei','size':14})
@@ -189,7 +196,7 @@ def rlvisual(is_smooth = False, fl = False, patent = True, is_beam = True, ula_n
         ax2.set_xlabel('Episodes')
         ax2.set_ylabel('Energy consumption (kJ)')
         ax2.legend()
-        ax2.set_title()
+        # ax2.set_title()
     fig2.savefig('./output/main_output/RL/energy.jpg')
     fig2.savefig('./output/main_output/RL/energy.eps')
     fig2.savefig('./output/main_output/RL/energy.pdf')

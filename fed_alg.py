@@ -32,22 +32,22 @@ class FedAvg():
             for i in range(num_clients):  
                 self.clients.append(Client(self.conf,  self.dataset.train_dataset, self.dataset.dataset_indice_list[i], id=i, compile = self.conf['compile']))
 
-            acc, loss = self.server.model_eval()
-            self.acc = acc
-            self.loss = loss
+            # acc, loss = self.server.model_eval()
+            # self.acc = acc
+            # self.loss = loss
+            
             
     def reset(self, ):
         # self.server.global_model.__init__() 
         # self.server.global_model.cuda()
         
         self.server.global_model.load_state_dict(self.global_model_init)
-
+        self.global_epoch_dic = {}
         acc, loss = self.server.model_eval()
         self.acc = acc
         self.loss = loss
         print(f'global Epoch: 0, acc: {acc}, loss: {loss}')
 
-        self.global_epoch_dic = {}  ##for print log
         self.global_epoch_dic['global Epoch'] = 0
         self.global_epoch_dic['global_accuracy'] = acc
         self.global_epoch_dic['global_loss'] = loss
