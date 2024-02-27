@@ -448,7 +448,7 @@ class Environment2(Environment):
         acc_increase = diff_acc
         acc_increase = 0
         loss_decrease = -diff_loss 
-        loss_decrease = 0
+        # loss_decrease = 0
 
         reward5 = - avg_local_loss
         reward5 = 0
@@ -465,7 +465,7 @@ class Environment2(Environment):
         f = deepcopy(next_f_uav_location)
         d = deepcopy(np.max(distance))
         
-        reward = reward_settle + (- energy_consum*0.001) + acc_increase + loss_decrease + reward5
+        reward = reward_settle + (- energy_consum*0.001) + acc_increase + loss_decrease*5 + reward5
 
         # print('energy:', energy_consum, 'loss_decrease:', loss_decrease )
         # print('acc_increase', acc_increase)

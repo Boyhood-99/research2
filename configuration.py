@@ -26,7 +26,7 @@ class ConfigDraw:
 @dataclass
 class ConfigTrain:
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    MAX_EPISODES = 4#500#1000
+    MAX_EPISODES = 400#500#1000
     BATCHSIZE = 256##256 ##256
     
     UAV_NUM = 5
@@ -88,7 +88,9 @@ color1 = "#038355" # 孔雀绿
 color2 = "#ffc34e" # 向日黄
 color3 = "#66ce63" # 湖蓝
 color4 = "#ec661f" #橘红
-color_dic = {'1':color1, '2':color2, '3':color3, '4':color4}
+color5 = 'lime'
+color6 = 'teal'
+color_dic = {'1':color1, '2':color2, '3':color3, '4':color4, '5':color5, '6':color6}
 
 marker_dict = {
     '1': 'o',      # 圆圈
