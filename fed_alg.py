@@ -168,10 +168,10 @@ class FedProx(FedAvg):
         super().__init__(conf, dir_alpha, feddecorr)
         self.name = 'FedProx'
 
-    def iteration(self, global_epoch, local_epochs):
-        return super().iteration(global_epoch, local_epochs)
+    def iteration(self, global_epoch, local_epochs, candidate_index, auto_lr=None):
+        return super().iteration(global_epoch, local_epochs, candidate_index, auto_lr)
+        
     
-
 class FedDyn(FedAvg):
     def __init__(self, conf, dir_alpha=0.3, feddecorr = False) -> None:
         super().__init__(conf, dir_alpha, feddecorr)
@@ -186,7 +186,7 @@ class FedDyn(FedAvg):
             for key, params in self.server.global_model.state_dict().items()
             }
         return super().reset()
-    def iteration(self, global_epoch, local_epochs, auto_lr=None ): 
+    def iteration(self, global_epoch, local_epochs, candidate_index, auto_lr=None): 
         begin = time.time()   
         self.candidates = []
         for i in self.conf['config_train'].CONDIDATE:

@@ -14,6 +14,26 @@ font = {'family' : 'Times New Roman',
 plt.rc('font', **font)
 
 
+def fl_alg_visual(fl_name_ls = None, dir_alpha = 0.3, patent = True, diretory = f'./output/FL_main_output'):
+    fig1, ax1 = plt.subplots(dpi = 200)
+    for i, fl_name in enumerate(fl_name_ls):
+        df_  = pd.read_csv(f'./output/FL_main_output/{fl_name}{dir_alpha}.csv')
+        if patent:
+            axis1, = ax1.plot(df_['global_accuracy'],  color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'], \
+                              label = f'{fl_name}', )
+        
+    ax1.set_xlabel('全局轮次', fontproperties = 'SimHei')
+    ax1.set_ylabel('准确率（%）', fontproperties = 'SimHei')
+    plt.legend(prop = 'SimHei')
+    # plt.legend([axis1, axis2, axis5, axis3, axis4,  axis6], ['模型准确率(所提算法)', '模型准确率(DDPG)', '模型准确率(PPO)',
+    #                  '模型损失(所提算法)', '模型损失(DDPG)', '模型损失(PPO)'], loc = 'center right', prop = 'SimHei')
+    
+    date = datetime.datetime.now().strftime('%m-%d')
+    fig1.savefig(os.path.join(diretory, f'{date}.png'))
+    fig1.savefig(os.path.join(diretory, f'{date}.pdf'))
+    fig1.savefig(os.path.join(diretory, f'{date}.eps'))
+
+    
 def data_dis_visual(df_list, patent = True, flag = None, diretory = f'./output/data_output/'):
     # df = pd.read_csv('./log07-05.csv')
     len_ = len(df_list[0][0])
@@ -22,10 +42,12 @@ def data_dis_visual(df_list, patent = True, flag = None, diretory = f'./output/d
     for i, (df, dir_alpha) in enumerate(df_list):
         glo_acc = list(df['global_accuracy'])
         glo_loss = list(df['global_loss'])
-
-        axis1, = ax1.plot(glo_acc,  color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'$η$ = {dir_alpha}')
-        axis2, = ax2.plot(glo_loss, color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'$η$ = {dir_alpha}')
-
+        if dir_alpha: 
+            axis1, = ax1.plot(glo_acc,  color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'$η$ = {dir_alpha}')
+            axis2, = ax2.plot(glo_loss, color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'$η$ = {dir_alpha}')
+        else:
+            axis1, = ax1.plot(glo_acc,  color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'IID')
+            axis2, = ax2.plot(glo_loss, color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'IID')
     ax1.set_xlabel('Global epoch')
     ax1.set_ylabel('Accuracy')
     ax1.set_xticks(list(range(len_)))

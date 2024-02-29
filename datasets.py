@@ -136,10 +136,13 @@ class Dataset(object):
         #     dataset_indice_list.append(dataset_indice)
         #######------------------------generate data distribution by myself
         print(client_sample_nums)
-        client_dic = self.client_inner_dirichlet_partition_v2(self.train_dataset.targets, num_clients=num_clients,num_classes=num_classes,
+        if dir_alpha == None:
+            client_dic = self.iid(num_samples=num_samples, client_sample_nums=client_sample_nums)
+        else:
+            client_dic = self.client_inner_dirichlet_partition_v2(self.train_dataset.targets, num_clients=num_clients,num_classes=num_classes,
                                                            dir_alpha=dir_alpha, client_sample_nums=client_sample_nums, seed=seed)
         
-        # client_dic = self.iid(num_samples=num_samples, client_sample_nums=client_sample_nums)
+        
         dataset_indice_list = [client_dic[i] for i in range(num_clients)]
         ######---------------------------
         for i in range(len(dataset_indice_list)):
