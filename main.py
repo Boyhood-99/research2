@@ -91,7 +91,7 @@ if __name__ == '__main__':
     conf["config_draw"] = config_draw 
 
     # train(conf, fl = fl, test = test, rl = AgentDDPG(conf,  dir='./output/main_output/DDPG'), dir='./output/main_output/DDPG/')
-    # train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
+    train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
     # train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
 
     # train(conf, fl = fl, test = test, rl = DDPG_(conf,  dir='./output/main_output/Proposed'), dir='./output/main_output/Proposed')
@@ -99,15 +99,15 @@ if __name__ == '__main__':
     
 
     ###
-    m_num = [10, 40]
-    ula_num = [3, 5]
-    for i in m_num:
-        for j in ula_num:
-            conf['config_train'].M_NUM = i
-            conf['config_train'].ULA_NUM = j
-            train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
+    # m_num = [10, 40]
+    # ula_num = [3, 5]
+    # for i in m_num:
+    #     for j in ula_num:
+    #         conf['config_train'].M_NUM = i
+    #         conf['config_train'].ULA_NUM = j
+    #         train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
     if True:
-        # rlvisual(patent = False, is_beam=config_train.IS_BEAM, ula_num=config_train.ULA_NUM)   
+        # rlvisual(patent = False, is_beam=config_train.IS_BEAM, ula_num=config_train.ULA_NUM, m_num=conf['config_train'].M_NUM)   
         # tra_visual(dir='./output/main_output/PPO/')
         # tra_visual(dir='./output/main_output/SAC/')
         # tra_visual(dir='./output/main_output/DDPG/')
