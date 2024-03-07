@@ -21,6 +21,8 @@ def train(conf, fl, test, rl, dir):
     rl = rl
     ula_num = conf['config_train'].ULA_NUM
     is_beam = conf['config_train'].IS_BEAM
+    uav_num = conf['config_train'].UAV_NUM
+    m_num = conf['config_train'].M_NUM
     assert isinstance(rl, AgentSAC)
     return_ls = []
     ene_consum_ls = []
@@ -54,18 +56,18 @@ def train(conf, fl, test, rl, dir):
 
     ls_return_ene = [[i ,j] for i, j in zip(return_ls, ene_consum_ls)]  
     df_return_ene = pd.DataFrame(ls_return_ene, columns=['return', 'energy'])
-    df_return_ene.to_csv(os.path.join(dir, f'return_ene{is_beam}{ula_num}.csv'))
+    df_return_ene.to_csv(os.path.join(dir, f'return_ene{is_beam}{ula_num}_{m_num}.csv'))
     ### test
     df_fl = None
     if test:
         if fl:
             df_fl = pd.DataFrame(acc_loss_test)
-            df_fl.to_csv(os.path.join(dir, f'acc_loss{is_beam}{ula_num}.csv'))
+            df_fl.to_csv(os.path.join(dir, f'acc_loss{is_beam}{ula_num}_{m_num}.csv'))
         df_actions = pd.DataFrame(actions)
-        df_actions.to_csv(os.path.join(dir, f'actions{is_beam}{ula_num}.csv'))
+        df_actions.to_csv(os.path.join(dir, f'actions{is_beam}{ula_num}_{m_num}.csv'))
 
         df_tra = pd.DataFrame(tra_ls)
-        df_tra.to_csv(os.path.join(dir, f'tra{is_beam}{ula_num}.csv'))
+        df_tra.to_csv(os.path.join(dir, f'tra{is_beam}{ula_num}_{m_num}.csv'))
 
     return return_ls, ene_consum_ls, df_fl   
 
@@ -88,15 +90,24 @@ if __name__ == '__main__':
     conf['config_train'] = config_train
     conf["config_draw"] = config_draw 
 
-    train(conf, fl = fl, test = test, rl = AgentDDPG(conf,  dir='./output/main_output/DDPG'), dir='./output/main_output/DDPG/')
-    train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
-    train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
+    # train(conf, fl = fl, test = test, rl = AgentDDPG(conf,  dir='./output/main_output/DDPG'), dir='./output/main_output/DDPG/')
+    # train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
+    # train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
 
     # train(conf, fl = fl, test = test, rl = DDPG_(conf,  dir='./output/main_output/Proposed'), dir='./output/main_output/Proposed')
 
+    
 
+    ###
+    m_num = [10, 40]
+    ula_num = [3, 5]
+    for i in m_num:
+        for j in ula_num:
+            conf['config_train'].M_NUM = i
+            conf['config_train'].ULA_NUM = j
+            train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
     if True:
-        rlvisual(patent = False, is_beam=config_train.IS_BEAM, ula_num=config_train.ULA_NUM)   
+        # rlvisual(patent = False, is_beam=config_train.IS_BEAM, ula_num=config_train.ULA_NUM)   
         # tra_visual(dir='./output/main_output/PPO/')
         # tra_visual(dir='./output/main_output/SAC/')
         # tra_visual(dir='./output/main_output/DDPG/')

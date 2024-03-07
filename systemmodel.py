@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 # =========================res50
 
 class SystemModel(object):
-    def __init__(self, datasize, f_uav_num = 5, is_beam = True):
+    def __init__(self, datasize, f_uav_num = 5, is_beam = True, m_num =20):
         self.is_beam = is_beam
         self.f_uav_num = f_uav_num              # 底层无人机数，K
         self.f_uav_H = 140               # 无人机的飞行高度
@@ -41,7 +41,7 @@ class SystemModel(object):
         self.B_il = self.B/self.f_uav_num     #FDMA
         # self.subbandwidth = self.B_up/self.M  #OFDMA
         self.subbandwidth = 5*10**4  #OFDMA
-        self.M = 20
+        self.M = m_num 
 
         self.delta = 0.7
         self.A_x = 3
@@ -310,8 +310,8 @@ class SystemModel(object):
 
 ##with beamforming
 class SystemModel2(SystemModel):
-    def __init__(self, datasize, ula_num = 3, f_uav_num = 5, is_beam = True):
-        super().__init__(datasize, f_uav_num = f_uav_num, is_beam=is_beam )
+    def __init__(self, datasize, ula_num = 3, f_uav_num = 5, is_beam = True, m_num =20):
+        super().__init__(datasize, f_uav_num = f_uav_num, is_beam=is_beam, m_num= m_num)
         self.A_x = ula_num
         self.A_y = ula_num
         self.A_z = ula_num
@@ -382,7 +382,7 @@ class SystemModel2(SystemModel):
 #----------------------------------------------------------------------------------------            
             g = self.A_x*self.A_y*self.A_z*g_x*g_y*g_z
             ##3 0.037;5,0.008;7,0.003
-            if g  > 0.01:    
+            if g  > 0.001:    
                 index.append(i)               
             G.append(g)
 
