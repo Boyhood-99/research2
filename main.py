@@ -91,8 +91,8 @@ if __name__ == '__main__':
     conf["config_draw"] = config_draw 
 
     # train(conf, fl = fl, test = test, rl = AgentDDPG(conf,  dir='./output/main_output/DDPG'), dir='./output/main_output/DDPG/')
-    # train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
     # train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
+    # train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
 
     # train(conf, fl = fl, test = test, rl = DDPG_(conf,  dir='./output/main_output/Proposed'), dir='./output/main_output/Proposed')
 

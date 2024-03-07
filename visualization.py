@@ -14,6 +14,26 @@ font = {'family' : 'Times New Roman',
 plt.rc('font', **font)
 
 
+def fl_alg_visual(fl_name_ls = None, dir_alpha = 0.3, patent = True, diretory = f'./output/FL_main_output'):
+    fig1, ax1 = plt.subplots(dpi = 200)
+    for i, fl_name in enumerate(fl_name_ls):
+        df_  = pd.read_csv(f'./output/FL_main_output/{fl_name}{dir_alpha}.csv')
+        if patent:
+            axis1, = ax1.plot(df_['global_accuracy'],  color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'], \
+                              label = f'{fl_name}', )
+        
+    ax1.set_xlabel('全局轮次', fontproperties = 'SimHei')
+    ax1.set_ylabel('准确率（%）', fontproperties = 'SimHei')
+    plt.legend(prop = 'SimHei')
+    # plt.legend([axis1, axis2, axis5, axis3, axis4,  axis6], ['模型准确率(所提算法)', '模型准确率(DDPG)', '模型准确率(PPO)',
+    #                  '模型损失(所提算法)', '模型损失(DDPG)', '模型损失(PPO)'], loc = 'center right', prop = 'SimHei')
+    
+    date = datetime.datetime.now().strftime('%m-%d')
+    fig1.savefig(os.path.join(diretory, f'{date}.png'))
+    fig1.savefig(os.path.join(diretory, f'{date}.pdf'))
+    fig1.savefig(os.path.join(diretory, f'{date}.eps'))
+
+    
 def data_dis_visual(df_list, patent = True, flag = None, diretory = f'./output/data_output/'):
     # df = pd.read_csv('./log07-05.csv')
     len_ = len(df_list[0][0])
@@ -22,10 +42,12 @@ def data_dis_visual(df_list, patent = True, flag = None, diretory = f'./output/d
     for i, (df, dir_alpha) in enumerate(df_list):
         glo_acc = list(df['global_accuracy'])
         glo_loss = list(df['global_loss'])
-
-        axis1, = ax1.plot(glo_acc,  color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'$η$ = {dir_alpha}')
-        axis2, = ax2.plot(glo_loss, color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'$η$ = {dir_alpha}')
-
+        if dir_alpha: 
+            axis1, = ax1.plot(glo_acc,  color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'$η$ = {dir_alpha}')
+            axis2, = ax2.plot(glo_loss, color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'$η$ = {dir_alpha}')
+        else:
+            axis1, = ax1.plot(glo_acc,  color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'IID')
+            axis2, = ax2.plot(glo_loss, color= color_dic[f'{i+1}'], marker=marker_dict[f'{i+1}'],  label = f'IID')
     ax1.set_xlabel('Global epoch')
     ax1.set_ylabel('Accuracy')
     ax1.set_xticks(list(range(len_)))
@@ -61,11 +83,14 @@ def flvisual(df, date = None, patent = False, diretory = f'./output/main_output/
     SAC_glo_loss = list(df['SAC_loss'])
     DDPG_glo_acc = list(df['DDPG_acc'])
     DDPG_glo_loss = list(df['DDPG_loss'])
+    PPO_glo_acc = list(df['PPO_acc'])
+    PPO_glo_loss = list(df['PPO_loss'])
 
-    fig1, ax1 = plt.subplots()
+    fig1, ax1 = plt.subplots(dpi=200)
     if patent:
         axis1, = ax1.plot(SAC_glo_acc,  color= color_dic['1'], marker=marker_dict['1'], label = '所提算法', )
         axis2, = ax1.plot(DDPG_glo_acc, color= color_dic['2'], marker=marker_dict['2'], label = 'DDPG', )
+        axis5, = ax1.plot(PPO_glo_acc, color= color_dic['5'], marker=marker_dict['5'], label = 'PPO', )
         ax1.set_xlabel('全局轮次', fontproperties = 'SimHei')
         ax1.set_ylabel('准确率（%）', fontproperties = 'SimHei')
         # ax1.legend()
@@ -73,10 +98,11 @@ def flvisual(df, date = None, patent = False, diretory = f'./output/main_output/
         ax2 = ax1.twinx()
         axis3, = ax2.plot(SAC_glo_loss,  color= color_dic['3'], marker=marker_dict['3'], label = '所提算法')
         axis4, = ax2.plot(DDPG_glo_loss, color= color_dic['4'], marker=marker_dict['4'], label = 'DDPG')
+        axis6, = ax2.plot(PPO_glo_loss, color= color_dic['6'], marker=marker_dict['6'], label = 'PPO')
         ax2.set_ylabel('损失', fontproperties = 'SimHei')
         # ax2.legend()
-        plt.legend([axis1, axis2, axis3, axis4], ['模型准确率(所提算法)', '模型准确率(DDPG)',
-                     '模型损失(所提算法)', '模型损失(DDPG)'], loc = 'center right', prop = 'SimHei')
+        plt.legend([axis1, axis2, axis5, axis3, axis4,  axis6], ['模型准确率(所提算法)', '模型准确率(DDPG)', '模型准确率(PPO)',
+                     '模型损失(所提算法)', '模型损失(DDPG)', '模型损失(PPO)'], loc = 'center right', prop = 'SimHei')
     else:
         axis1, = ax1.plot(SAC_glo_acc,  color= color_dic['1'], marker=marker_dict['1'], label = 'test accuracy with proposed')
         axis2, = ax1.plot(DDPG_glo_acc, color= color_dic['2'], marker=marker_dict['2'], label = 'test accuracy with DDPG')
@@ -104,13 +130,15 @@ def rlvisual(is_smooth = False, fl = False, patent = False, is_beam = True, ula_
     
     #####   FL可视化
     if fl:
-        df_fl_SAC  = pd.read_csv('./patent/SAC/acc_loss.csv')   if patent else pd.read_csv('./output/main_output/SAC/acc_loss.csv')
-        df_fl_DDPG = pd.read_csv('./patent/DDPG/acc_loss.csv')  if patent else pd.read_csv('./output/main_output/DDPG/acc_loss.csv')
+        df_fl_SAC  = pd.read_csv(f'./output/main_output/SAC/acc_loss{is_beam}{ula_num}.csv')
+        df_fl_DDPG = pd.read_csv(f'./output/main_output/DDPG/acc_loss{is_beam}{ula_num}.csv')
+        df_fl_PPO = pd.read_csv(f'./output/main_output/PPO/acc_loss{is_beam}{ula_num}.csv')
 
         date = datetime.datetime.now().strftime('%m-%d')
-        df = pd.concat([df_fl_SAC[['global_accuracy', 'global_loss']], df_fl_DDPG[['global_accuracy', 'global_loss']]], axis=1,)
+        df = pd.concat([df_fl_SAC[['global_accuracy', 'global_loss']], df_fl_DDPG[['global_accuracy', 'global_loss']], \
+                        df_fl_PPO[['global_accuracy', 'global_loss']]], axis=1,)
         df.to_csv(f'fl.csv')
-        df.columns =  ['SAC_acc', 'SAC_loss',  'DDPG_acc', 'DDPG_loss']
+        df.columns =  ['SAC_acc', 'SAC_loss',  'DDPG_acc', 'DDPG_loss', 'PPO_acc', 'PPO_loss',]
         # ['SAC', 'SAC_acc', 'SAC_loss', 'DDPG', 'DDPG_acc', 'DDPG_loss']
         flvisual(df, date, patent = True)
 
@@ -138,17 +166,17 @@ def rlvisual(is_smooth = False, fl = False, patent = False, is_beam = True, ula_
     ene_consum_ls_Pro   =  return_ene_Pro['energy']
 
     #####    return
-    fig1, ax1 = plt.subplots()
+    fig1, ax1 = plt.subplots(dpi=200)
     
     if patent:
-        # ax1.plot(return_ls_PPO, color = 'green', linewidth = 1, linestyle='-',label='PPO')
-        ax1.plot(return_ls_Pro, color = 'red', linewidth = 1, linestyle='-', )
-        ax1.plot(return_ls_SAC, color = 'lime' ,  linewidth = 1, linestyle='-', )
-        ax1.annotate('DDPG', xy=(130, return_ls_Pro[130]), xytext=(200, -20), arrowprops=dict(arrowstyle = '->', ),   font = 'SimHei')
-        ax1.annotate('所提算法', xy=(120, return_ls_SAC[120]), xytext=(0, -10), arrowprops=dict(arrowstyle = '->', ), font = 'SimHei')
+        ax1.plot(return_ls_PPO, color = 'green', linewidth = 1, linestyle='-', label='PPO')
+        ax1.plot(return_ls_DDPG, color = 'red', linewidth = 1, linestyle='-', label='DDPG')
+        ax1.plot(return_ls_SAC, color = 'lime' ,  linewidth = 1, linestyle='-', label='所提算法')
+        # ax1.annotate('DDPG', xy=(130, return_ls_Pro[130]), xytext=(200, -20), arrowprops=dict(arrowstyle = '->', ),   font = 'SimHei')
+        # ax1.annotate('所提算法', xy=(120, return_ls_SAC[120]), xytext=(0, -10), arrowprops=dict(arrowstyle = '->', ), font = 'SimHei')
         ax1.set_xlabel('回合', fontproperties='SimHei',)
         ax1.set_ylabel('回报', fontproperties='SimHei',)
-        # ax1.legend(loc = 'best', prop = {'family':'SimHei','size':14})
+        ax1.legend(loc = 'best', prop = {'family':'SimHei','size':14})
 
     else:
         if is_smooth:
@@ -177,12 +205,13 @@ def rlvisual(is_smooth = False, fl = False, patent = False, is_beam = True, ula_
     fig1.savefig('./output/main_output/RL/return.jpg')
     fig1.savefig('./output/main_output/RL/return.eps')
     fig1.savefig('./output/main_output/RL/return.pdf')
+    fig1.savefig('./output/main_output/RL/return.png')
 
     ########  energy
-    fig2, ax2 = plt.subplots()
+    fig2, ax2 = plt.subplots(dpi=200)
     if patent:
-        # ax2.plot(ene_consum_ls_PPO, color = 'green', linewidth=1, linestyle='-',label='PPO')
-        ax2.plot(ene_consum_ls_Pro, color = 'red',  linewidth=1, linestyle='-',label='DDPG')
+        ax2.plot(ene_consum_ls_PPO, color = 'green', linewidth=1, linestyle='-',label='PPO')
+        ax2.plot(ene_consum_ls_DDPG, color = 'red',  linewidth=1, linestyle='-',label='DDPG')
         ax2.plot(ene_consum_ls_SAC, color = 'lime',  linewidth=1, linestyle='-',label='所提算法')
         ax2.set_xlabel('回合', fontproperties='SimHei',)
         ax2.set_ylabel('能耗（千焦）', fontproperties='SimHei',)
@@ -199,12 +228,14 @@ def rlvisual(is_smooth = False, fl = False, patent = False, is_beam = True, ula_
     fig2.savefig('./output/main_output/RL/energy.jpg')
     fig2.savefig('./output/main_output/RL/energy.eps')
     fig2.savefig('./output/main_output/RL/energy.pdf')
+    fig2.savefig('./output/main_output/RL/energy.png')
+    
     
     return 
 
-def tra_visual(dir = f'./output/main_output/DDPG/'):
+def tra_visual(patent = True, is_beam = True, ula_num = 3, dir = f'./output/main_output/DDPG/'):
 
-    df = pd.read_csv(os.path.join(dir, 'tra.csv'))
+    df = pd.read_csv(os.path.join(dir, f'tra{is_beam}{ula_num}.csv'))
     h_uav = df['h_uav']
     h_uav_ls = []
     i = 0
@@ -225,16 +256,21 @@ def tra_visual(dir = f'./output/main_output/DDPG/'):
         
         l_uavs.append(l_uav_ls)
     ### plot h_uav
-    fig = plt.figure(figsize=(5,5))
+    # fig = plt.figure(figsize=(5,5))
     fig = plt.figure(dpi = 200)
     ax = fig.add_subplot(projection='3d')
     
-    ax.plot(h_uav_ls[0], h_uav_ls[1], h_uav_ls[2], marker=marker_dict['1'], markersize=2, label = 'The trajectory of H-UAV')
+    
+    if patent:
+        ax.plot(h_uav_ls[0], h_uav_ls[1], h_uav_ls[2], marker=marker_dict['1'], markersize=2, label = '顶层无人机轨迹')
+        ax.legend(loc = 'best', prop={'family':'SimHei', 'size': 14})
+    else:
+        ax.plot(h_uav_ls[0], h_uav_ls[1], h_uav_ls[2], marker=marker_dict['1'], markersize=2, label = 'The trajectory of H-UAV')
+        ax.legend()
     for i in range(5):
         ax.plot(l_uavs[i][0], l_uavs[i][1], l_uavs[i][2], )
 
-    ax.legend()
-    ax.set_title('The trajectory of H-UAV and L-UAVs')
+    # ax.set_title('顶层无人机和底层无人机的轨迹')
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
@@ -243,6 +279,7 @@ def tra_visual(dir = f'./output/main_output/DDPG/'):
     fig.savefig(os.path.join(dir, 'tra.jpg'))
     fig.savefig(os.path.join(dir, 'tra.pdf'))
     fig.savefig(os.path.join(dir, 'tra.eps'))
+    fig.savefig(os.path.join(dir, 'tra.png'))
 
 
 def smooth(data, sm=1):

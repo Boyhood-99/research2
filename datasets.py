@@ -36,8 +36,6 @@ class Dataset(object):
             train_dataset = datasets.MNIST(dir, train=True, download=True, transform=transform_train())
             eval_dataset = datasets.MNIST(dir, train=False, transform=transforms.ToTensor())
 
-
-
         elif name=='cifar10':
             if True:
                 transform_train = transforms.Compose([
@@ -61,11 +59,10 @@ class Dataset(object):
                 pass
         return train_dataset, eval_dataset
     
-    def get_indice(self, dir_alpha):
+    def get_indice(self, dir_alpha, dis = 'NIID'):
         num_clients = self.conf['config_train'].UAV_NUM
         num_samples = len(self.train_dataset)
         print(num_samples)
-        
         client_sample_nums  = [np.random.randint(800,1000) for i in range(num_clients)]
        
 
@@ -132,17 +129,20 @@ class Dataset(object):
         #                             seed=seed)
 
         #####
-        ######
+        ######基于fedlab分区，划分数据集索引
         # dataset_indice_list = []
         # for i in range(num_clients):
         #     dataset_indice = cifar10part.client_dict[i]
         #     dataset_indice_list.append(dataset_indice)
         #######------------------------generate data distribution by myself
         print(client_sample_nums)
-        client_dic = self.client_inner_dirichlet_partition_v2(self.train_dataset.targets, num_clients=num_clients,num_classes=num_classes,
+        if dir_alpha == None:
+            client_dic = self.iid(num_samples=num_samples, client_sample_nums=client_sample_nums)
+        else:
+            client_dic = self.client_inner_dirichlet_partition_v2(self.train_dataset.targets, num_clients=num_clients,num_classes=num_classes,
                                                            dir_alpha=dir_alpha, client_sample_nums=client_sample_nums, seed=seed)
         
-        # client_dic = self.iid(num_samples=num_samples, client_sample_nums=client_sample_nums)
+        
         dataset_indice_list = [client_dic[i] for i in range(num_clients)]
         ######---------------------------
         for i in range(len(dataset_indice_list)):
@@ -152,7 +152,6 @@ class Dataset(object):
                 assert len(set_c) == 0, "存在同一元素"
 
         return dataset_indice_list
-
 
 
     def client_inner_dirichlet_partition(self, targets, num_clients, num_classes, dir_alpha,
