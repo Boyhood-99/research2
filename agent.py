@@ -167,7 +167,7 @@ class AgentSAC():
         
         return self.ep_reward, energy_consum, actions, self.env.get_dflist(), tra_ls
 
-    def update(self, update_times = 200):
+    def update(self, update_times = 20):
         if self.agent.replay_buffer.__len__() > self.warmup_capacity : 
             for i in range(update_times):   #50-200np.clip((200-i)*2,50,200)
                 q_, p_, alpha_ = self.agent.learn()
@@ -219,7 +219,7 @@ class AgentDDPG(AgentSAC):
         return super().episode_test(i, global_epochs)
     
     ##回合更新
-    def update(self, update_times = 200):
+    def update(self, update_times = 20):
         if self.agent.replay_buffer.__len__() > self.warmup_capacity : 
             for i in range(update_times):   #50-200np.clip((200-i)*2,50,200)
                 # _, _ = self.agent.learn()
@@ -292,7 +292,7 @@ class AgentPPO(AgentSAC):
         return super().episode_test(i, global_epochs)
         
     
-    def update(self, update_times = 200):
+    def update(self, update_times = 20):
         self.agent.learn()
     
     def save_model(self):

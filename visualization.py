@@ -127,13 +127,13 @@ def flvisual(df, date = None, patent = False, diretory = f'./output/main_output/
     fig1.savefig(os.path.join(diretory, f'{date}.eps'))
 
 
-def rlvisual(is_smooth = False, fl = False, patent = False, is_beam = True, ula_num = 3,):
+def rlvisual(is_smooth = False, fl = False, patent = False, is_beam = True, ula_num = 3, m_num = 20):
     
     #####   FL可视化
     if fl:
-        df_fl_SAC  = pd.read_csv(f'./output/main_output/SAC/acc_loss{is_beam}{ula_num}.csv')
-        df_fl_DDPG = pd.read_csv(f'./output/main_output/DDPG/acc_loss{is_beam}{ula_num}.csv')
-        df_fl_PPO = pd.read_csv(f'./output/main_output/PPO/acc_loss{is_beam}{ula_num}.csv')
+        df_fl_SAC  = pd.read_csv(f'./output/main_output/SAC/acc_loss{is_beam}{ula_num}_{m_num}.csv')
+        df_fl_DDPG = pd.read_csv(f'./output/main_output/DDPG/acc_loss{is_beam}{ula_num}_{m_num}.csv')
+        df_fl_PPO = pd.read_csv(f'./output/main_output/PPO/acc_loss{is_beam}{ula_num}_{m_num}.csv')
 
         date = datetime.datetime.now().strftime('%m-%d')
         df = pd.concat([df_fl_SAC[['global_accuracy', 'global_loss']], df_fl_DDPG[['global_accuracy', 'global_loss']], \
@@ -151,20 +151,20 @@ def rlvisual(is_smooth = False, fl = False, patent = False, is_beam = True, ula_
     # return_ene_PPO = pd.read_csv('./patent/PPO/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/PPO/return_ene{is_beam}{ula_num}.csv')
     # return_ene_Pro = pd.read_csv('./patent/PPO/return_ene.csv') if patent else pd.read_csv(f'./output/main_output/Proposed/return_ene{is_beam}{ula_num}.csv')
 
-    return_ene_SAC  =  pd.read_csv(f'./output/main_output/SAC/return_ene{is_beam}{ula_num}.csv')
-    return_ene_DDPG =  pd.read_csv(f'./output/main_output/DDPG/return_ene{is_beam}{ula_num}.csv')
-    return_ene_PPO =   pd.read_csv(f'./output/main_output/PPO/return_ene{is_beam}{ula_num}.csv')
-    return_ene_Pro =   pd.read_csv(f'./output/main_output/Proposed/return_ene{is_beam}{ula_num}.csv')
+    # return_ene_SAC  =  pd.read_csv(f'./output/main_output/SAC/return_ene{is_beam}{ula_num}_{m_num}.csv')
+    # return_ene_DDPG =  pd.read_csv(f'./output/main_output/DDPG/return_ene{is_beam}{ula_num}_{m_num}.csv')
+    return_ene_PPO =   pd.read_csv(f'./output/main_output/PPO/return_ene{is_beam}{ula_num}_{m_num}.csv')
+    # return_ene_Pro =   pd.read_csv(f'./output/main_output/Proposed/return_ene{is_beam}{ula_num}_{m_num}.csv')
 
-    return_ls_SAC  = return_ene_SAC['return']
-    return_ls_DDPG = return_ene_DDPG['return']
+    # return_ls_SAC  = return_ene_SAC['return']
+    # return_ls_DDPG = return_ene_DDPG['return']
     return_ls_PPO  = return_ene_PPO['return']
-    return_ls_Pro  = return_ene_Pro['return']
+    # return_ls_Pro  = return_ene_Pro['return']
 
-    ene_consum_ls_SAC   =  return_ene_SAC['energy']
-    ene_consum_ls_DDPG  =  return_ene_DDPG['energy']
+    # ene_consum_ls_SAC   =  return_ene_SAC['energy']
+    # ene_consum_ls_DDPG  =  return_ene_DDPG['energy']
     ene_consum_ls_PPO   =  return_ene_PPO['energy']
-    ene_consum_ls_Pro   =  return_ene_Pro['energy']
+    # ene_consum_ls_Pro   =  return_ene_Pro['energy']
 
     #####    return
     fig1, ax1 = plt.subplots(dpi=200)
@@ -194,10 +194,10 @@ def rlvisual(is_smooth = False, fl = False, patent = False, is_beam = True, ula_
             # ax1.plot(return_ls_PPO, color = 'lightgreen', linewidth = 1, linestyle='-',label='return with PPO')
             # ax1.plot(return_ls_Pro, color = 'gray', linewidth = 1, linestyle='-',label='return with Proposed')
         else:
-            ax1.plot(return_ls_DDPG, color = 'blue', linewidth = 1, linestyle='-',label='return with DDPG')
+            # ax1.plot(return_ls_DDPG, color = 'blue', linewidth = 1, linestyle='-',label='return with DDPG')
             ax1.plot(return_ls_PPO, color = 'green', linewidth = 1, linestyle='-',label='return with PPO')
             # ax1.plot(return_ls_Pro, color = 'red', linewidth = 1, linestyle='-',label='return with DDPG')
-            ax1.plot(return_ls_SAC, color = 'lime' ,  linewidth = 1, linestyle='-',label='return with Proposed')
+            # ax1.plot(return_ls_SAC, color = 'lime' ,  linewidth = 1, linestyle='-',label='return with Proposed')
         
         ax1.set_xlabel('Episodes')
         ax1.set_ylabel('Return')
@@ -219,9 +219,10 @@ def rlvisual(is_smooth = False, fl = False, patent = False, is_beam = True, ula_
         ax2.legend(loc = 'best', prop = {'family':'SimHei','size':14})
     else:
         # ax2.plot(ene_consum_ls_Pro, color = 'red',  linewidth=1, linestyle='-',label='energy consumption with DDPG')
-        ax2.plot(ene_consum_ls_DDPG, color = 'red', linewidth=1, linestyle='-',label='energy consumption with DDPG')
+        # ax2.plot(ene_consum_ls_DDPG, color = 'red', linewidth=1, linestyle='-',label='energy consumption with DDPG')
         ax2.plot(ene_consum_ls_PPO, color = 'green', linewidth=1, linestyle='-',label='energy consumption with PPO')
-        ax2.plot(ene_consum_ls_SAC, color = 'lime',  linewidth=1, linestyle='-',label='energy consumption with Proposed')
+        # ax2.plot(ene_consum_l
+        #  color = 'lime',  linewidth=1, linestyle='-',label='energy consumption with Proposed')
         ax2.set_xlabel('Episodes')
         ax2.set_ylabel('Energy consumption (kJ)')
         ax2.legend()

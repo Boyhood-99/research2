@@ -254,10 +254,12 @@ class Environment2(Environment):
         datasize = self.fl.get_datasize()
         self.systemmodel = SystemModel2(datasize, f_uav_num = self.f_uav_num, 
                                         ula_num=self.conf['config_train'].ULA_NUM,
+                                        m_num = self.conf['config_train'].M_NUM,
                                        )
         if not self.is_beam:
             self.systemmodel = SystemModel(datasize, f_uav_num = self.f_uav_num, 
                                         is_beam=False,
+                                        m_num = self.conf['config_train'].M_NUM,
                                        )
     def generate_position(self, init_position, time_max):
         '''
@@ -359,10 +361,10 @@ class Environment2(Environment):
         local_epochs = int(action[2])
         self.step_num += 1
 
-        # global_epoch_dic = {}
-        # diff_acc = 0
-        # diff_loss = 0
-        # avg_local_loss = 0
+        global_epoch_dic = {}
+        diff_acc = 0
+        diff_loss = 0
+        avg_local_loss = 0
 
         global_epoch_dic, acc, diff_acc, diff_loss, avg_local_loss = self.fl.iteration(step_num, \
                                                         local_epochs, candidate_index=self.conf["config_train"].CONDIDATE)
@@ -448,10 +450,10 @@ class Environment2(Environment):
         acc_increase = diff_acc
         acc_increase = 0
         loss_decrease = -diff_loss 
-        # loss_decrease = 0
+        
 
         reward5 = - avg_local_loss
-        reward5 = 0
+        
 
         #结算奖励
         ##已设置为0
