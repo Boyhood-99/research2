@@ -37,8 +37,8 @@ def fl_alg_visual(fl_name_ls = None, dir_alpha = 0.3, patent = True, diretory = 
 def data_dis_visual(df_list, patent = True, flag = None, diretory = f'./output/data_output/'):
     # df = pd.read_csv('./log07-05.csv')
     len_ = len(df_list[0][0])
-    fig1, ax1 = plt.subplots()
-    fig2, ax2 = plt.subplots()
+    fig1, ax1 = plt.subplots(dpi=200)
+    fig2, ax2 = plt.subplots(dpi=200)
     for i, (df, dir_alpha) in enumerate(df_list):
         glo_acc = list(df['global_accuracy'])
         glo_loss = list(df['global_loss'])
@@ -51,28 +51,29 @@ def data_dis_visual(df_list, patent = True, flag = None, diretory = f'./output/d
     ax1.set_xlabel('Global epoch')
     ax1.set_ylabel('Accuracy')
     ax1.set_xticks(list(range(len_)))
-    ax1.legend()
+    ax1.legend(prop={'family':'SimHei', 'size':14})
 
     ax2.set_xlabel('Global epoch')
     ax2.set_ylabel('Loss')
     ax2.set_xticks(list(range(len_)))
-    ax2.legend()
+    ax2.legend(prop={'family':'SimHei', 'size':14})
 
     if patent:
-        ax1.set_xlabel('全局轮次', fontproperties = 'SimHei')
-        ax1.set_ylabel('准确率（%）', fontproperties = 'SimHei')
-        ax2.set_xlabel('全局轮次', fontproperties = 'SimHei')
-        ax2.set_ylabel('损失', fontproperties = 'SimHei')
+        ax1.set_xlabel('全局轮次', fontdict={'family':'SimHei', 'size':14})
+        ax1.set_ylabel('准确率（%）', fontdict={'family':'SimHei', 'size':14})
+        ax2.set_xlabel('全局轮次', fontdict={'family':'SimHei', 'size':14})
+        ax2.set_ylabel('损失', fontdict={'family':'SimHei', 'size':14})
 
     if not os.path.exists(diretory):
         os.makedirs(diretory)  
-    fig1.savefig(os.path.join(diretory, 'acc.png'))
-    fig1.savefig(os.path.join(diretory, 'acc.pdf'))
-    fig1.savefig(os.path.join(diretory, 'acc.eps'))
+    date = datetime.datetime.now().strftime('%m-%d')
+    fig1.savefig(os.path.join(diretory, f'{date}acc.png'))
+    fig1.savefig(os.path.join(diretory, f'{date}acc.pdf'))
+    fig1.savefig(os.path.join(diretory, f'{date}acc.eps'))
 
-    fig2.savefig(os.path.join(diretory, 'loss.png'))
-    fig2.savefig(os.path.join(diretory, 'loss.pdf'))
-    fig2.savefig(os.path.join(diretory, 'loss.eps'))
+    fig2.savefig(os.path.join(diretory, f'{date}loss.png'))
+    fig2.savefig(os.path.join(diretory, f'{date}loss.pdf'))
+    fig2.savefig(os.path.join(diretory, f'{date}loss.eps'))
 
 
 def flvisual(df, date = None, patent = False, diretory = f'./output/main_output/FL'):
@@ -236,6 +237,7 @@ def rlvisual(is_smooth = False, fl = False, patent = False, is_beam = True, ula_
 def tra_visual(patent = True, is_beam = True, ula_num = 3, dir = f'./output/main_output/DDPG/'):
 
     df = pd.read_csv(os.path.join(dir, f'tra{is_beam}{ula_num}.csv'))
+    # df = pd.read_csv(os.path.join(dir, f'tra_0.001_5.csv'))
     h_uav = df['h_uav']
     h_uav_ls = []
     i = 0
