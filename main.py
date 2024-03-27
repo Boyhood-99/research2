@@ -5,7 +5,7 @@ import numpy as np
 import datetime
 from uav import *
 from torch.utils.tensorboard import SummaryWriter
-from visualization import  flvisual, rlvisual, tra_visual
+from visualization import  flvisual, rlvisual, tra_visual, bar, m_bar, num_uav_fl
 from configuration import ConfigDraw, ConfigTrain
 from agent import AgentSAC, AgentDDPG, AgentPPO, DDPG_
 import os
@@ -87,11 +87,12 @@ if __name__ == '__main__':
         conf = json.load(f)
     config_train = ConfigTrain()
     config_draw = ConfigDraw()
+    
     conf['config_train'] = config_train
     conf["config_draw"] = config_draw 
 
     # train(conf, fl = fl, test = test, rl = AgentDDPG(conf,  dir='./output/main_output/DDPG'), dir='./output/main_output/DDPG/')
-    train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
+    # train(conf, fl = fl, test = test, rl = AgentPPO(conf, dir='./output/main_output/PPO'), dir='./output/main_output/PPO/')
     # train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
 
     # train(conf, fl = fl, test = test, rl = DDPG_(conf,  dir='./output/main_output/Proposed'), dir='./output/main_output/Proposed')
@@ -105,13 +106,20 @@ if __name__ == '__main__':
     #     for j in ula_num:
     #         conf['config_train'].M_NUM = i
     #         conf['config_train'].ULA_NUM = j
-    #         train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
+    # uav_num = [10, 20]
+    # for i in uav_num:
+    #     conf['config_train'].UAV_NUM = i
+    #     train(conf, fl = fl, test = test, rl = AgentSAC(conf, dir='./output/main_output/SAC'), dir='./output/main_output/SAC/')
     if True:
         # rlvisual(patent = False, is_beam=config_train.IS_BEAM, ula_num=config_train.ULA_NUM, m_num=conf['config_train'].M_NUM)   
         # tra_visual(dir='./output/main_output/PPO/')
         # tra_visual(dir='./output/main_output/SAC/')
         # tra_visual(dir='./output/main_output/DDPG/')
         # tra_visual(dir='./output/main_output/Proposed')
+
+        # bar()
+        # m_bar(m_num_ls = [10,20,40])
+        num_uav_fl(uav_num_ls = [5, 10, 20])
         pass
 
 
